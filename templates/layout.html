@@ -324,36 +324,46 @@
       opacity: 0.9;
     }
     
-    /* PWA Install Button */
+    /* PWA Install Button - Mobil Öncelikli */
     .pwa-install-mobile {
-      display: flex !important; /* Debug için her zaman göster */
+      display: flex !important; /* Her zaman göster */
       gap: 10px;
       flex-wrap: wrap;
       justify-content: center;
+      margin-top: 1rem;
+      width: 100%;
     }
     
     .btn-pwa-install {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white !important;
       border: none;
-      padding: 12px 24px;
+      padding: 14px 20px; /* Mobil için büyütüldü */
       border-radius: 25px;
-      font-size: 14px;
+      font-size: 16px; /* Mobil için büyütüldü */
       font-weight: 600;
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
       cursor: pointer;
       text-decoration: none;
+      min-height: 48px; /* Touch target minimum */
+      flex: 1;
+      min-width: 150px;
+      max-width: 200px;
     }
     
-    .btn-pwa-install:hover {
+    .btn-pwa-install:hover,
+    .btn-pwa-install:focus,
+    .btn-pwa-install:active {
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
       background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
       color: white !important;
+      text-decoration: none;
     }
     
     .btn-pwa-ask {
@@ -361,40 +371,73 @@
       box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3) !important;
     }
     
-    .btn-pwa-ask:hover {
+    .btn-pwa-ask:hover,
+    .btn-pwa-ask:focus,
+    .btn-pwa-ask:active {
       background: linear-gradient(135deg, #ff8a80 0%, #fec5ea 100%) !important;
       box-shadow: 0 8px 25px rgba(255, 154, 158, 0.4) !important;
+      color: white !important;
     }
     
-    /* Mobil cihazlarda PWA butonunu göster */
+    /* Mobil cihazlarda PWA butonunu optimize et */
     @media (max-width: 768px) {
       .pwa-install-mobile {
         display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+        padding: 0 10px;
       }
       
       .btn-pwa-install {
-        font-size: 12px;
-        padding: 10px 16px;
-        flex: 1;
-        min-width: 140px;
-        justify-content: center;
+        font-size: 16px;
+        padding: 16px 20px;
+        flex: none;
+        width: 100%;
+        max-width: none;
+        min-height: 52px; /* Daha büyük touch target */
+      }
+      
+      .btn-pwa-install i {
+        font-size: 18px;
       }
     }
     
     @media (max-width: 480px) {
       .pwa-install-mobile {
-        flex-direction: column;
-        gap: 8px;
+        gap: 10px;
+        padding: 0 5px;
       }
       
       .btn-pwa-install {
-        font-size: 11px;
-        padding: 8px 14px;
+        font-size: 15px;
+        padding: 14px 16px;
+        min-height: 50px;
+      }
+      
+      .btn-pwa-install span {
+        font-size: 15px;
       }
     }
     
-    /* Touch cihazlarda PWA butonunu göster */
+    /* Touch cihazlarda PWA butonunu optimize et */
     @media (pointer: coarse) {
+      .pwa-install-mobile {
+        display: flex !important;
+      }
+      
+      .btn-pwa-install {
+        min-height: 48px;
+        touch-action: manipulation; /* iOS Safari için */
+        -webkit-tap-highlight-color: transparent; /* iOS highlight'ı kaldır */
+      }
+    }
+    
+    /* Yüksek yoğunluk ekranlar için */
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+      .btn-pwa-install {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    }
       .pwa-install-mobile {
         display: block !important;
       }
@@ -575,13 +618,13 @@
     <div class="footer-content">
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
       
-      <!-- PWA Ana Ekrana Ekle Butonları - Sadece Mobilde -->
-      <div id="pwa-install-container" class="pwa-install-mobile">
-        <button id="pwa-install-btn" class="btn-pwa-install">
+      <!-- PWA Ana Ekrana Ekle Butonları - Mobil Optimize -->
+      <div id="pwa-install-container" class="pwa-install-mobile" style="display: flex !important; visibility: visible !important; opacity: 1 !important;">
+        <button id="pwa-install-btn" class="btn-pwa-install" type="button">
           <i class="fas fa-download"></i>
           <span>Ana Uygulama Yükle</span>
         </button>
-        <button id="seyma-ask-install-btn" class="btn-pwa-install btn-pwa-ask">
+        <button id="seyma-ask-install-btn" class="btn-pwa-install btn-pwa-ask" type="button">
           <i class="fas fa-robot"></i>
           <span>Şeyma'ya Sor Yükle</span>
         </button>
@@ -638,23 +681,38 @@
       });
     }
 
-    // PWA ve Bildirim yönetimi - Gelişmiş Debug
+    // PWA ve Bildirim yönetimi - Mobil Optimize
     let deferredPrompt;
     const pwaButton = document.getElementById('pwa-install-btn');
     const seymaAskButton = document.getElementById('seyma-ask-install-btn');
+    const pwaContainer = document.getElementById('pwa-install-container');
     
-    console.log('=== PWA Buton Debug ===');
+    console.log('=== PWA Mobil Debug ===');
     console.log('Ana PWA Butonu:', pwaButton);
     console.log('Şeyma Sor Butonu:', seymaAskButton);
-    console.log('PWA Container:', document.getElementById('pwa-install-container'));
+    console.log('PWA Container:', pwaContainer);
+    console.log('Screen Width:', window.screen.width);
+    console.log('Inner Width:', window.innerWidth);
+    console.log('User Agent:', navigator.userAgent);
+    console.log('Touch Support:', 'ontouchstart' in window);
     
-    // PWA butonları her zaman görünür olsun
-    const pwaContainer = document.getElementById('pwa-install-container');
+    // PWA butonları ZORLA görünür yap - özellikle mobilde
     if (pwaContainer) {
       pwaContainer.style.display = 'flex';
+      pwaContainer.style.visibility = 'visible';
+      pwaContainer.style.opacity = '1';
       console.log('PWA Container zorla gösterildi');
+      
+      // Mobil cihazlarda ek stiller
+      if (window.innerWidth <= 768 || 'ontouchstart' in window) {
+        pwaContainer.style.flexDirection = 'column';
+        pwaContainer.style.gap = '12px';
+        pwaContainer.style.padding = '0 10px';
+        console.log('Mobil PWA stilleri uygulandı');
+      }
     }
 
+    // beforeinstallprompt event'i
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('PWA kurulum prompt\'u hazır');
       e.preventDefault();
@@ -667,20 +725,20 @@
     });
 
     // PWA Debug Information
-    console.log('=== PWA Debug Information ===');
-    console.log('User Agent:', navigator.userAgent);
+    console.log('=== PWA Sistem Bilgileri ===');
     console.log('Service Worker Support:', 'serviceWorker' in navigator);
     console.log('Manifest Links:', document.querySelectorAll('link[rel="manifest"]').length);
-    console.log('Window Width:', window.innerWidth);
-    console.log('Is Mobile:', window.matchMedia('(max-width: 768px)').matches);
+    console.log('Is Mobile Device:', /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
     console.log('Is Touch Device:', window.matchMedia('(pointer: coarse)').matches);
+    console.log('Screen Orientation:', screen.orientation ? screen.orientation.type : 'Unknown');
     
     // Service Worker durumunu kontrol et
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(registrations => {
-        console.log('Active Service Workers:', registrations.length);
+        console.log('Aktif Service Worker sayısı:', registrations.length);
         registrations.forEach((registration, index) => {
-          console.log(`SW ${index + 1}:`, registration.scope);
+          console.log(`SW ${index + 1} Scope:`, registration.scope);
+          console.log(`SW ${index + 1} State:`, registration.active ? registration.active.state : 'inactive');
         });
       });
     }
@@ -691,50 +749,91 @@
       alert('🎉 Uygulama ana ekranınıza başarıyla eklendi!');
     });
 
-    // Ana uygulama PWA install butonu
-    if (pwaButton) {
-      console.log('Ana PWA butonuna event listener ekleniyor');
-      pwaButton.addEventListener('click', function(e) {
-        console.log('Ana PWA butonu tıklandı!');
+    // Touch event'leri için optimizasyon
+    function addTouchSupport(button, callback) {
+      if (!button) return;
+      
+      let touchStartTime = 0;
+      
+      button.addEventListener('touchstart', function(e) {
+        touchStartTime = Date.now();
+        button.style.transform = 'scale(0.95)';
+      }, { passive: true });
+      
+      button.addEventListener('touchend', function(e) {
         e.preventDefault();
+        const touchDuration = Date.now() - touchStartTime;
+        
+        button.style.transform = 'scale(1)';
+        
+        if (touchDuration < 300) { // Quick tap
+          console.log('Touch tap detected:', button.id);
+          callback(e);
+        }
+      }, { passive: false });
+      
+      // Fallback click event
+      button.addEventListener('click', function(e) {
+        console.log('Click event detected:', button.id);
+        e.preventDefault();
+        callback(e);
+      });
+    }
+
+    // Ana uygulama PWA install butonu - Touch optimized
+    if (pwaButton) {
+      console.log('Ana PWA butonuna touch support ekleniyor');
+      addTouchSupport(pwaButton, function(e) {
+        console.log('Ana PWA butonu tetiklendi!');
         installMainPWA();
       });
     } else {
-      console.error('Ana PWA butonu bulunamadı!');
+      console.error('❌ Ana PWA butonu bulunamadı!');
     }
     
-    // Şeyma'ya Sor PWA install butonu
+    // Şeyma'ya Sor PWA install butonu - Touch optimized
     if (seymaAskButton) {
-      console.log('Şeyma Sor butonuna event listener ekleniyor');
-      seymaAskButton.addEventListener('click', function(e) {
-        console.log('Şeyma Sor butonu tıklandı!');
-        e.preventDefault();
+      console.log('Şeyma Sor butonuna touch support ekleniyor');
+      addTouchSupport(seymaAskButton, function(e) {
+        console.log('Şeyma Sor butonu tetiklendi!');
         installSeymaAskPWA();
       });
     } else {
-      console.error('Şeyma Sor butonu bulunamadı!');
+      console.error('❌ Şeyma Sor butonu bulunamadı!');
     }
 
     function installMainPWA() {
-      console.log('installMainPWA fonksiyonu çalışıyor...');
-      alert('🎯 Ana PWA butonu çalışıyor! deferredPrompt: ' + (deferredPrompt ? 'VAR' : 'YOK'));
+      console.log('installMainPWA fonksiyonu çalışıyor... (Mobil optimize)');
+      
+      // Mobil cihaz tespiti
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const alertMessage = isMobile ? 
+        '📱 Ana PWA butonu ÇALIŞIYOR! (Mobil)\ndeferredPrompt: ' + (deferredPrompt ? 'VAR' : 'YOK') :
+        '🖥️ Ana PWA butonu çalışıyor! (Masaüstü)\ndeferredPrompt: ' + (deferredPrompt ? 'VAR' : 'YOK');
+      
+      alert(alertMessage);
       
       if (deferredPrompt) {
-        console.log('Ana uygulama PWA prompt kullanılıyor');
+        console.log('PWA prompt kullanılıyor');
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
-            console.log('Ana uygulama PWA kuruldu');
+            console.log('PWA kuruldu');
             alert('✅ Ana uygulama başarıyla ana ekranınıza eklendi!');
-            requestNotificationPermission();
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+              requestNotificationPermission();
+            }
           } else {
-            console.log('Ana uygulama PWA kurulumu reddedildi');
+            console.log('PWA kurulumu reddedildi');
             showInstallInstructions();
           }
           deferredPrompt = null;
         });
       } else {
-        console.log('Ana uygulama için deferredPrompt yok, manuel kurulum gösteriliyor');
+        console.log('deferredPrompt yok, manuel kurulum gösteriliyor');
+        showInstallInstructions();
+      }
+    }
         showInstallInstructions();
       }
     }

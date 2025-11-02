@@ -71,11 +71,16 @@ self.addEventListener('fetch', event => {
                     // Yanıtı klonla
                     const responseToCache = response.clone();
 
-                    // Cache'e ekle
-                    caches.open(CACHE_NAME)
-                        .then(cache => {
-                            cache.put(event.request, responseToCache);
-                        });
+                    // Cache'e ekle - Chrome extension URL'lerini filtrele
+                    if (event.request.url.startsWith('http')) {
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                cache.put(event.request, responseToCache);
+                            })
+                            .catch(error => {
+                                console.log('Cache put hatası (güvenle yok sayılabilir):', error);
+                            });
+                    }
 
                     return response;
                 }).catch(() => {

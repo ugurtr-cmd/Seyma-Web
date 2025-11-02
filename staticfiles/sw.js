@@ -69,14 +69,21 @@ self.addEventListener('fetch', function(event) {
 
             // Response'u cache'e ekle
             var responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then(function(cache) {
-                // Sadece belirli dosya türlerini cache'le
-                if (shouldCache(event.request.url)) {
-                  cache.put(event.request, responseToCache);
-                  console.log('Cache\'e eklendi:', event.request.url);
-                }
-              });
+            
+            // Chrome extension URL'lerini filtrele
+            if (event.request.url.startsWith('http')) {
+              caches.open(CACHE_NAME)
+                .then(function(cache) {
+                  // Sadece belirli dosya türlerini cache'le
+                  if (shouldCache(event.request.url)) {
+                    cache.put(event.request, responseToCache);
+                    console.log('Cache\'e eklendi:', event.request.url);
+                  }
+                })
+                .catch(function(error) {
+                  console.log('Cache put hatası (güvenle yok sayılabilir):', error);
+                });
+            }
 
             return response;
           })
