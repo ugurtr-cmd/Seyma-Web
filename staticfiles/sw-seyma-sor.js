@@ -1,6 +1,6 @@
 const CACHE_NAME = 'seyma-sor-v1';
 const urlsToCache = [
-    '/seyma-sor/',
+    '/arama-motoru/',
     '/static/seyma-sor-manifest.json',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', event => {
     }
 
     // API isteklerini cache'leme
-    if (event.request.url.includes('/seyma-sor/') && event.request.method === 'POST') {
+    if (event.request.url.includes('/arama-motoru/') && event.request.method === 'POST') {
         return;
     }
 
@@ -191,7 +191,7 @@ self.addEventListener('notificationclick', event => {
     event.notification.close();
 
     event.waitUntil(
-        clients.openWindow('/seyma-sor/')
+        clients.openWindow('/arama-motoru/')
     );
 });
 

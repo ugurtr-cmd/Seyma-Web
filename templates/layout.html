@@ -621,41 +621,66 @@
     }
 
     function installPWA() {
-      // İki seçenek sun: Ana uygulama ve Şeyma'ya Sor
-      const choice = confirm('📱 Hangi uygulamayı yüklemek istiyorsuniz?\n\n' +
-                           'OK = Ana Uygulama (Şeyma - Öğrenci Yönetimi)\n' +
-                           'İptal = Şeyma\'ya Sor (AI Asistan)');
-      
-      if (choice) {
-        // Ana uygulama yükle
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          deferredPrompt.userChoice.then((choiceResult) => {
-            if (choiceResult.outcome === 'accepted') {
-              console.log('Ana uygulama PWA kuruldu');
-              requestNotificationPermission();
-            } else {
-              console.log('Ana uygulama PWA kurulumu reddedildi');
-            }
-            deferredPrompt = null;
-            document.getElementById('pwa-install-container').style.display = 'none';
-          });
-        }
+      // Sıralı kurulum: Önce ana uygulama, sonra Şeyma'ya Sor
+      installMainApp();
+    }
+
+    function installMainApp() {
+      if (deferredPrompt) {
+        // Ana uygulama kurulumu
+        console.log('Ana uygulama kurulumu başlatılıyor...');
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('Ana uygulama PWA kuruldu');
+            // Ana uygulama kurulduktan sonra Şeyma'ya Sor kurulumunu başlat
+            setTimeout(() => {
+              installSeymaAskApp();
+            }, 2000);
+          } else {
+            console.log('Ana uygulama PWA kurulumu reddedildi');
+            // Ana uygulama reddedilse bile Şeyma'ya Sor'u teklif et
+            setTimeout(() => {
+              installSeymaAskApp();
+            }, 1000);
+          }
+          deferredPrompt = null;
+        });
       } else {
-        // Şeyma'ya Sor uygulamasına yönlendir
+        // Ana uygulama prompt'u yoksa direkt Şeyma'ya Sor'a geç
+        installSeymaAskApp();
+      }
+    }
+
+    function installSeymaAskApp() {
+      // Şeyma'ya Sor uygulaması için yeni sekme aç
+      const askChoice = confirm('🤖 "Şeyma\'ya Sor" AI Asistan uygulamasını da yüklemek ister misiniz?\n\n' +
+                               'Bu uygulama ile AI destekli sorularınızı hızlıca sorabilirsiniz.');
+      
+      if (askChoice) {
+        // Yeni sekmede Şeyma'ya Sor'u aç
         const newWindow = window.open('/arama-motoru/', '_blank');
         if (newWindow) {
           newWindow.focus();
-          // Kısa süre sonra pencereyi kapat ve kullanıcıyı bilgilendir
+          // Kullanıcıyı bilgilendir
           setTimeout(() => {
-            alert('🤖 "Şeyma\'ya Sor" sayfası açıldı!\n\n' +
-                  'Bu sayfadan AI asistan uygulamasını ana ekranınıza ekleyebilirsiniz.');
-          }, 1000);
+            alert('✅ İki uygulama da hazır!\n\n' +
+                  '📱 Ana Uygulama: Öğrenci yönetimi\n' +
+                  '🤖 Şeyma\'ya Sor: AI Asistan\n\n' +
+                  'Açılan sekmeden "Şeyma\'ya Sor" uygulamasını da ana ekranınıza ekleyebilirsiniz.');
+          }, 2000);
         } else {
           // Popup engellenirse direkt yönlendir
           window.location.href = '/arama-motoru/';
         }
+      } else {
+        // Şeyma'ya Sor reddedildiyse tamamlandı mesajı
+        alert('✅ Ana uygulama kurulumu tamamlandı!\n\n' +
+              'İsterseniz daha sonra menüden "Şeyma\'ya Sor" AI asistanını da kullanabilirsiniz.');
       }
+      
+      // PWA install container'ı gizle
+      document.getElementById('pwa-install-container').style.display = 'none';
     }
 
     // Bildirim izni isteme
