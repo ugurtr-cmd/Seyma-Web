@@ -50,5 +50,20 @@ urlpatterns = [
     # PWA Routes
     path('offline/', views.offline_page, name='offline'),
     path('pwa-test/', views.pwa_test, name='pwa_test'),
+    path('notification-test/', views.notification_test, name='notification_test'),
+    
+    # Şeyma'ya Sor PWA Routes
+    path('seyma-sor/', views.arama_motoru, name='seyma_sor_pwa'),
+    path('seyma-sor-manifest.json', views.seyma_sor_manifest, name='seyma_sor_manifest'),
+    path('sw-seyma-sor.js', views.seyma_sor_service_worker, name='seyma_sor_service_worker'),
+    
+    # Günlük Mesaj Routes
+    path('admin-paneli/gunluk-mesaj-guncelle/', views.gunluk_mesaj_guncelle, name='gunluk_mesaj_guncelle'),
+    path('admin-paneli/gunluk-mesaj-tepki/', views.gunluk_mesaj_tepki, name='gunluk_mesaj_tepki'),
 
+    # Bildirim API Routes
+    path('api/bildirim-abonelik/', views.bildirim_abonelik_kaydet, name='bildirim_abonelik'),
+    path('api/test-bildirim/', views.test_bildirim_gonder, name='test_bildirim'),
+    path('api/daily-message-notification/', views.gunluk_mesaj_bildirimi_api, name='daily_message_notification'),
+    path('api/weekly-report-notification/', views.haftalik_rapor_bildirimi_api, name='weekly_report_notification'),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

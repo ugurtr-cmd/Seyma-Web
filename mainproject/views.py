@@ -50,7 +50,7 @@ from django.views.decorators.http import require_POST
 from blog import models
 from blog.models import yazi, category, SiteContent
 from .models import ElifBaEzberDurumu, ElifBaEzberi, Ogrenci, Ders, EzberSuresi, DersNotu, EzberKaydi, SinavSonucu
-from .models import Alinti
+from .models import Alinti, GunlukMesaj
 
 # Global restore progress değişkeni
 restore_progress = {
@@ -1585,6 +1585,15 @@ def admin_dashboard(request):
     # Son 5 yazı
     son_yazilar = yazi.objects.all().order_by('-id')[:5]
     
+    # Günlük mesaj sistemi
+    gunluk_mesaj = GunlukMesaj.bugunun_mesaji()
+    if not gunluk_mesaj:
+        # Bugün için mesaj yok, yeni oluştur
+        gunluk_mesaj = gunluk_mesaj_olustur()
+    
+    # Son 7 günün mesajları
+    gecmis_mesajlar = GunlukMesaj.gecmis_mesajlar(7)
+    
     context = {
         'toplam_yazi': toplam_yazi,
         'toplam_ogrenci': toplam_ogrenci,
@@ -1597,6 +1606,9 @@ def admin_dashboard(request):
         'en_basarili_5_ogrenci': en_basarili_5_ogrenci,
         'son_ogrenciler': son_ogrenciler,
         'son_yazilar': son_yazilar,
+        # Günlük mesaj sistemi
+        'gunluk_mesaj': gunluk_mesaj,
+        'gecmis_mesajlar': gecmis_mesajlar,
     }
     
     return render(request, 'admin_dashboard.html', context)
@@ -2756,3 +2768,303 @@ def offline_page(request):
 def pwa_test(request):
     """PWA test sayfası"""
     return render(request, 'pwa-test.html')
+
+
+# =================== GÜNLÜK MESAJ SİSTEMİ ===================
+
+def gunluk_mesaj_olustur():
+    """Gemini AI ile günlük kişisel mesaj oluştur"""
+    try:
+        # Bugünün mesajı var mı kontrol et
+        bugun = timezone.now().date()
+        if GunlukMesaj.objects.filter(tarih=bugun).exists():
+            return GunlukMesaj.objects.get(tarih=bugun)
+        
+        # Mevcut istatistikleri al
+        toplam_ogrenci = Ogrenci.objects.count()
+        bu_ay_yeni_ogrenci = Ogrenci.objects.filter(
+            kayit_tarihi__month=bugun.month,
+            kayit_tarihi__year=bugun.year
+        ).count()
+        
+        toplam_tamamlanan_ezber = EzberKaydi.objects.filter(durum='TAMAMLANDI').count()
+        toplam_tamamlanan_elifba = ElifBaEzberDurumu.objects.filter(durum='TAMAMLANDI').count()
+        
+        # Son günlerin mesaj tiplerini kontrol et (çeşitlilik için)
+        son_mesajlar = GunlukMesaj.objects.filter(
+            tarih__gte=bugun - timezone.timedelta(days=7)
+        ).values_list('mesaj_tipi', flat=True)
+        
+        # Mesaj tipini seç (son 7 günde kullanılmayanı tercih et)
+        mesaj_tipleri = ['GUNAYDIN', 'MOTIVASYON', 'DINI', 'EGITIM', 'KISISEL', 'DUYGU', 'BASARI']
+        kullanilmayan_tipler = [tip for tip in mesaj_tipleri if tip not in son_mesajlar]
+        secilen_tip = random.choice(kullanilmayan_tipler) if kullanilmayan_tipler else random.choice(mesaj_tipleri)
+        
+        # Haftanın günü ve zamana göre prompt hazırla
+        gun_adi = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'][bugun.weekday()]
+        
+        # Personalized AI prompt oluştur
+        prompt = f"""
+        Şeyma için çok kişisel ve samimi bir günlük mesaj yaz. Şeyma, Kur'an eğitimi veren bir öğretmen ve bu eğitim platformunun yöneticisi.
+
+        BUGÜNÜN BİLGİLERİ:
+        - Tarih: {bugun.strftime('%d %B %Y')}
+        - Gün: {gun_adi}
+        - Mesaj Tipi: {secilen_tip}
+        
+        PLATFORM İSTATİSTİKLERİ:
+        - Toplam öğrenci sayısı: {toplam_ogrenci}
+        - Bu ay yeni öğrenci: {bu_ay_yeni_ogrenci}
+        - Tamamlanan ezberler: {toplam_tamamlanan_ezber}
+        - Tamamlanan Elif Ba: {toplam_tamamlanan_elifba}
+
+        MESAJ KURALLARI:
+        1. Şeyma'ya doğrudan hitap et ("Sen", "Sana" kullan)
+        2. Samimi, sıcak ve kişisel ol
+        3. Dini değerleri ve eğitim misyonunu vurgula
+        4. Bugünkü istatistikleri övgüyle bahset
+        5. Motivasyonel ama yapmacık olmayan bir ton kullan
+        6. 2-3 paragraf uzunluğunda yaz
+        7. Günün özelliğine göre mesajı şekillendir
+
+        TİP BAZLI ÖZEL İÇERİK:
+        - GUNAYDIN: Güzel bir sabah dilekçesi, günün bereketli geçmesi duası
+        - MOTIVASYON: Başarılarını hatırlat, geleceğe dair umut ver
+        - DINI: Ayet veya hadis paylaş, manevi değerlere değin
+        - EGITIM: Öğretmenlik misyonunu vurgula, eğitim tavsiyeleri
+        - KISISEL: Kendine zaman ayırma, dinlenme önerileri
+        - DUYGU: Duygusal destek, zorluklarla başa çıkma
+        - BASARI: Başardıklarını kutla, öğrencilerinin ilerlemesini vurgula
+
+        Lütfen doğal, samimi ve Şeyma'nın ruhunu okşayacak bir mesaj yaz.
+        """
+        
+        # Gemini AI çağrısı
+        genai.configure(api_key=settings.GOOGLE_AI_API_KEY)
+        model = genai.GenerativeModel('gemini-pro')
+        
+        response = model.generate_content(prompt)
+        mesaj_metni = response.text
+        
+        # Mesajı veritabanına kaydet
+        gunluk_mesaj = GunlukMesaj.objects.create(
+            tarih=bugun,
+            mesaj=mesaj_metni,
+            mesaj_tipi=secilen_tip,
+            ai_generated=True,
+            ai_prompt=prompt
+        )
+        
+        return gunluk_mesaj
+        
+    except Exception as e:
+        # Hata durumunda varsayılan mesaj
+        fallback_mesajlar = [
+            f"🌸 Günaydın Şeyma! Bugün {gun_adi}, yeni bir gün yeni fırsatlar demek. {toplam_ogrenci} öğrencin senin rehberliğinde Kur'an'ı öğrenmeye devam ediyor. Bu ne büyük bir bereket!",
+            f"💝 Sevgili Şeyma, bugün {toplam_tamamlanan_ezber} tamamlanmış ezber ve {toplam_tamamlanan_elifba} bitmiş Elif Ba ile ne kadar başarılı bir yolculuk! Sen sadece öğretmen değil, bir gönül mimarısın.",
+            f"🌟 {gun_adi} günün mübarek olsun Şeyma! {bu_ay_yeni_ogrenci} yeni öğrenci bu ay ailemize katıldı. Her yeni gelen çocuk, senin etkili öğretmenliğinin bir göstergesi.",
+        ]
+        
+        gunluk_mesaj = GunlukMesaj.objects.create(
+            tarih=bugun,
+            mesaj=random.choice(fallback_mesajlar),
+            mesaj_tipi='MOTIVASYON',
+            ai_generated=False,
+            ai_prompt=f"HATA: {str(e)}"
+        )
+        
+        return gunluk_mesaj
+
+
+def gunluk_mesaj_guncelle(request):
+    """AJAX ile günlük mesajı güncelle"""
+    if request.method == 'POST':
+        try:
+            mesaj = GunlukMesaj.bugunun_mesaji()
+            if not mesaj:
+                mesaj = gunluk_mesaj_olustur()
+            
+            # Okundu işaretle
+            if not mesaj.okundu:
+                mesaj.okundu = True
+                mesaj.save()
+            
+            return JsonResponse({
+                'success': True,
+                'mesaj': mesaj.mesaj,
+                'mesaj_tipi': mesaj.get_mesaj_tipi_display(),
+                'tarih': mesaj.tarih.strftime('%d %B %Y'),
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+def gunluk_mesaj_tepki(request):
+    """Mesaja beğeni/puan verme"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            mesaj = GunlukMesaj.bugunun_mesaji()
+            
+            if mesaj:
+                if 'begeni' in data:
+                    mesaj.begeni = data['begeni']
+                if 'puan' in data:
+                    mesaj.not_puani = data['puan']
+                if 'not' in data:
+                    mesaj.ek_notlar = data['not']
+                
+                mesaj.save()
+                
+                return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+# Bildirim API Views Import
+from .notification_views import (
+    bildirim_abonelik_kaydet, 
+    test_bildirim_gonder, 
+    gunluk_mesaj_bildirimi_api, 
+    haftalik_rapor_bildirimi_api
+)
+
+def notification_test(request):
+    """Bildirim test sayfası"""
+    return render(request, 'notification_test.html')
+
+
+def seyma_sor_pwa(request):
+    """Şeyma'ya Sor PWA uygulaması"""
+    if request.method == 'POST':
+        # JSON verisi mi form verisi mi kontrol et
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            sorgu = data.get('sorgu', '')
+        else:
+            sorgu = request.POST.get('sorgu', '')
+        
+        if not sorgu or len(sorgu.strip()) == 0:
+            return JsonResponse({'error': 'Sorgu boş olamaz'}, status=400)
+        
+        # Ana arama motoru fonksiyonunu kullan
+        # Önbellek anahtarı oluştur
+        cache_key = f"gemini_{hash(sorgu)}"
+        cached_response = cache.get(cache_key)
+        
+        if cached_response:
+            return JsonResponse({
+                'cevap': cached_response,
+                'sorgu': sorgu,
+                'cached': True
+            })
+        
+        # Gemini API isteği
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'X-goog-api-key': settings.GEMINI_API_KEY
+        }
+        
+        # Daha iyi formatlanmış yanıt almak için prompt'u optimize et
+        prompt = (
+            f"Şeyma adında birine cevap verir gibi yanıtla. Karşındaki kişi bir kuran öğretmeni ve hafız. İsmi Şeyma çok zeki, çok güzel, çok değerli"
+            f"Seninle konuşan ve konuştuğun karşındaki kişi olan Şeyma, Amine Hatun Kuran Kursunda Hafızlık Hazırlık Öğretmeni"
+            f"Kullanıcının sorusu: {sorgu}. "
+            f"Cevabın samimi, dostane ve bilgilendirici olsun. "
+            f"Lütfen yanıtını aşağıdaki kurallara göre formatla:\n"
+            f"1. Başlıklar için **kalın** kullan\n"
+            f"2. Maddeler için * işareti kullan\n"
+            f"3. Her maddeyi yeni satırda başlat\n"
+            f"4. Paragraflar arasında boşluk bırak\n"
+            f"6. HTML etiketi kullanma, sadece * ve ** işaretleri kullan."
+        )
+
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.7,
+                "topK": 40,
+                "topP": 0.95,
+                "maxOutputTokens": 1024,
+            }
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            # Yanıtı çıkar
+            if (result.get('candidates') and 
+                len(result['candidates']) > 0 and 
+                result['candidates'][0].get('content') and
+                result['candidates'][0]['content'].get('parts') and
+                len(result['candidates'][0]['content']['parts']) > 0):
+                
+                cevap = result['candidates'][0]['content']['parts'][0]['text']
+                
+                # Metni formatla
+                formatted_cevap = format_gemini_response(cevap)
+                
+                # Önbelleğe al (1 saat)
+                cache.set(cache_key, formatted_cevap, 3600)
+                
+                return JsonResponse({
+                    'cevap': formatted_cevap,
+                    'sorgu': sorgu,
+                    'success': True
+                })
+            else:
+                return JsonResponse({
+                    'error': 'API yanıt formatı beklenen şekilde değil'
+                }, status=500)
+                
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP hatası: {str(e)}"
+            if hasattr(e, 'response') and e.response.status_code == 429:
+                error_msg = "Şu anda çok fazla istek yapıldı. Lütfen bir süre sonra tekrar deneyin."
+            return JsonResponse({'error': error_msg}, status=500)
+            
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({'error': f'Bağlantı hatası: {str(e)}'}, status=500)
+        except Exception as e:
+            return JsonResponse({'error': f'Bilinmeyen hata: {str(e)}'}, status=500)
+    
+    # GET isteği için sayfa render et
+    context = {}
+    return render(request, 'seyma_sor_pwa.html', context)
+
+
+def seyma_sor_manifest(request):
+    """Şeyma'ya Sor PWA için manifest dosyası"""
+    with open('staticfiles/seyma-sor-manifest.json', 'r', encoding='utf-8') as f:
+        manifest_data = json.load(f)
+    
+    return JsonResponse(manifest_data, content_type='application/manifest+json')
+
+
+def seyma_sor_service_worker(request):
+    """Şeyma'ya Sor PWA için service worker"""
+    with open('staticfiles/sw-seyma-sor.js', 'r', encoding='utf-8') as f:
+        sw_content = f.read()
+    
+    return HttpResponse(sw_content, content_type='application/javascript')
+    return render(request, 'notification_test.html')

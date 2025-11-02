@@ -248,3 +248,100 @@ class EzberKaydi(models.Model):
         elif self.durum == 'TAMAMLANDI' and not self.bitis_tarihi:
             self.bitis_tarihi = timezone.now().date()
         super().save(*args, **kwargs)
+
+
+class GunlukMesaj(models.Model):
+    """Şeyma için günlük kişisel motivasyon mesajları"""
+    MESAJ_TIPLERI = [
+        ('GUNAYDIN', 'Günaydın Mesajı'),
+        ('MOTIVASYON', 'Motivasyon Mesajı'),
+        ('DINI', 'Dini İçerik'),
+        ('EGITIM', 'Eğitim Tavsiyesi'),
+        ('KISISEL', 'Kişisel Gelişim'),
+        ('DUYGU', 'Duygusal Destek'),
+        ('BASARI', 'Başarı Hikayeleri'),
+        ('DIGER', 'Diğer'),
+    ]
+    
+    tarih = models.DateField(default=timezone.now, unique=True)
+    mesaj = models.TextField()
+    mesaj_tipi = models.CharField(max_length=10, choices=MESAJ_TIPLERI, default='MOTIVASYON')
+    okundu = models.BooleanField(default=False)
+    begeni = models.BooleanField(default=False, verbose_name="Beğendi mi?")
+    not_puani = models.PositiveSmallIntegerField(null=True, blank=True, help_text="1-10 arası puan")
+    ek_notlar = models.TextField(blank=True, verbose_name="Şeyma'nın Notları")
+    
+    # AI ile oluşturulma bilgileri
+    ai_generated = models.BooleanField(default=True)
+    ai_prompt = models.TextField(blank=True, verbose_name="Kullanılan AI Prompt")
+    olusturma_tarihi = models.DateTimeField(auto_now_add=True)
+    guncelleme_tarihi = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Günlük Mesaj"
+        verbose_name_plural = "Günlük Mesajlar"
+        ordering = ['-tarih']
+    
+    def __str__(self):
+        return f"{self.tarih.strftime('%d/%m/%Y')} - {self.get_mesaj_tipi_display()}"
+    
+    def mesaj_ozeti(self):
+        """Mesajın ilk 50 karakteri"""
+        return self.mesaj[:50] + "..." if len(self.mesaj) > 50 else self.mesaj
+    
+    @classmethod
+    def bugunun_mesaji(cls):
+        """Bugünün mesajını getir, yoksa oluştur"""
+        bugun = timezone.now().date()
+        try:
+            return cls.objects.get(tarih=bugun)
+        except cls.DoesNotExist:
+            return None
+    
+    @classmethod
+    def gecmis_mesajlar(cls, gun_sayisi=7):
+        """Son N günün mesajlarını getir"""
+        bugun = timezone.now().date()
+        baslangic = bugun - timezone.timedelta(days=gun_sayisi)
+        return cls.objects.filter(tarih__gte=baslangic).order_by('-tarih')
+
+
+class BildirimAbonelik(models.Model):
+    """PWA bildirim abonelik bilgileri"""
+    endpoint = models.TextField(unique=True)
+    p256dh_key = models.TextField()
+    auth_key = models.TextField()
+    aktif = models.BooleanField(default=True)
+    olusturulma_tarihi = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Bildirim Aboneliği"
+        verbose_name_plural = "Bildirim Abonelikleri"
+    
+    def __str__(self):
+        return f"Abonelik {self.id} - {self.olusturulma_tarihi.strftime('%d.%m.%Y')}"
+
+
+class BildirimGecmisi(models.Model):
+    """Gönderilen bildirimler geçmişi"""
+    BILDIRIM_TIPLERI = [
+        ('GUNLUK_MESAJ', 'Günlük Kişisel Mesaj'),
+        ('HAFTALIK_RAPOR', 'Haftalık Öğrenci Raporu'),
+        ('SISTEM', 'Sistem Bildirimi'),
+        ('HOSGELDIN', 'Hoş Geldin Mesajı'),
+    ]
+    
+    tip = models.CharField(max_length=20, choices=BILDIRIM_TIPLERI)
+    baslik = models.CharField(max_length=200)
+    icerik = models.TextField()
+    gonderilme_tarihi = models.DateTimeField(auto_now_add=True)
+    basarili_gonderim = models.PositiveIntegerField(default=0)
+    basarisiz_gonderim = models.PositiveIntegerField(default=0)
+    
+    class Meta:
+        verbose_name = "Bildirim Geçmişi"
+        verbose_name_plural = "Bildirim Geçmişleri"
+        ordering = ['-gonderilme_tarihi']
+    
+    def __str__(self):
+        return f"{self.get_tip_display()} - {self.baslik[:50]}..."

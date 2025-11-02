@@ -276,6 +276,41 @@
       <i class="fas fa-tachometer-alt"></i> Kontrol Paneli
     </h1>
   </div>
+
+  <!-- Günlük Kişisel Mesaj Widget'ı -->
+  {% if gunluk_mesaj %}
+  <div class="card mb-4" id="gunluk-mesaj-widget" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+    <div class="card-header" style="background: rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.2);">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="fas fa-heart me-2"></i>
+          <span>Şeyma'ya Özel Mesaj - {{ gunluk_mesaj.tarih|date:"d F Y" }}</span>
+        </h5>
+        <div class="d-flex gap-2">
+          <span class="badge" style="background: rgba(255,255,255,0.2);">{{ gunluk_mesaj.get_mesaj_tipi_display }}</span>
+          {% if not gunluk_mesaj.okundu %}
+            <span class="badge bg-warning">Yeni</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="mesaj-text" style="font-size: 1.1rem; line-height: 1.6; margin-bottom: 1rem;">
+        {{ gunluk_mesaj.mesaj|linebreaks }}
+      </div>
+      
+      <div class="d-flex justify-content-end align-items-center">
+        <div class="d-flex gap-2">
+          {% if gecmis_mesajlar.count > 1 %}
+            <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#gecmisMesajlarModal">
+              <i class="fas fa-history"></i> Geçmiş Mesajlar
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
   
   <!-- İstatistik Kartları -->
   <div class="dashboard-stats">
@@ -575,5 +610,99 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Günlük Mesaj JavaScript Fonksiyonları - Basitleştirilmiş
+</script>
+
+<!-- Geçmiş Mesajlar Modal -->
+{% if gecmis_mesajlar.count > 1 %}
+<div class="modal fade" id="gecmisMesajlarModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-history me-2"></i>
+          Son 7 Günün Mesajları
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="timeline">
+          {% for mesaj in gecmis_mesajlar %}
+          <div class="timeline-item {% if forloop.first %}active{% endif %}">
+            <div class="timeline-marker">
+              <i class="fas fa-{% if mesaj.mesaj_tipi == 'GUNAYDIN' %}sun{% elif mesaj.mesaj_tipi == 'MOTIVASYON' %}rocket{% elif mesaj.mesaj_tipi == 'DINI' %}mosque{% elif mesaj.mesaj_tipi == 'EGITIM' %}graduation-cap{% elif mesaj.mesaj_tipi == 'KISISEL' %}user{% elif mesaj.mesaj_tipi == 'DUYGU' %}heart{% elif mesaj.mesaj_tipi == 'BASARI' %}trophy{% else %}comment{% endif %}"></i>
+            </div>
+            <div class="timeline-content">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">{{ mesaj.tarih|date:"d F Y" }}</h6>
+                <div class="d-flex gap-2">
+                  <span class="badge bg-primary">{{ mesaj.get_mesaj_tipi_display }}</span>
+                  {% if mesaj.begeni %}<i class="fas fa-heart text-danger"></i>{% endif %}
+                  {% if mesaj.not_puani %}<span class="text-warning">★{{ mesaj.not_puani }}/10</span>{% endif %}
+                </div>
+              </div>
+              <p class="mb-0">{{ mesaj.mesaj_ozeti }}</p>
+              {% if mesaj.ek_notlar %}
+                <small class="text-muted"><strong>Not:</strong> {{ mesaj.ek_notlar }}</small>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e9ecef;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -2.2rem;
+  top: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: white;
+  border: 3px solid #007bff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #007bff;
+}
+
+.timeline-item.active .timeline-marker {
+  background: #007bff;
+  color: white;
+}
+
+.timeline-content {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+</style>
+{% endif %}
 </script>
 {% endblock %}

@@ -18,8 +18,8 @@
     <link rel="manifest" href="{% url 'seyma_sor_manifest' %}">
     
     <!-- Favicon ve İkonlar -->
-    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'pwa/icon-192x192.png' %}">
-    <link rel="apple-touch-icon" href="{% static 'pwa/icon-192x192.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🤖%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🤖%3C/text%3E%3C/svg%3E">
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -34,6 +34,7 @@
         :root {
             --primary-color: #4e73df;
             --primary-dark: #3a56c4;
+            --secondary-color: #f093fb;
             --accent-color: #ff6b6b;
             --text-color: #2d3748;
             --text-light: #718096;
@@ -55,6 +56,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 15px;
+            position: relative;
         }
         
         .main-container {
@@ -71,6 +73,86 @@
             flex-direction: column;
             justify-content: center;
             gap: 2rem;
+        }
+        
+        /* PWA İnstall Banner */
+        .pwa-install-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .pwa-install-banner.show {
+            display: block;
+        }
+        
+        .pwa-install-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .pwa-install-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .pwa-install-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .pwa-install-btn, .pwa-dismiss-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .pwa-install-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .pwa-dismiss-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* Ana uygulama link */
+        .main-app-link {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.95);
+            color: var(--primary-color);
+            padding: 8px 12px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: var(--transition);
+            z-index: 999;
+        }
+        
+        .main-app-link:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            color: var(--primary-dark);
         }
         
         /* Logo Section */
@@ -96,7 +178,7 @@
         
         .logo-title {
             font-family: 'Playfair Display', serif;
-            font-size: 4rem;
+            font-size: 3.5rem;
             font-weight: 900;
             color: white;
             margin-bottom: 0.5rem;
@@ -107,12 +189,25 @@
         }
         
         .logo-subtitle {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: rgba(255, 255, 255, 0.9);
             font-weight: 300;
             letter-spacing: 0.5px;
             position: relative;
             z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .ai-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
         
         /* Search Form */
@@ -358,35 +453,11 @@
             animation: float 4s ease-in-out infinite;
         }
         
-        /* Ana uygulama link */
-        .main-app-link {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            background: rgba(255,255,255,0.95);
-            color: var(--primary-color);
-            padding: 8px 12px;
-            border-radius: 20px;
-            text-decoration: none;
-            font-size: 12px;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: var(--transition);
-            z-index: 999;
-        }
-        
-        .main-app-link:hover {
-            background: white;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-            color: var(--primary-dark);
-        }
-        
-        /* Responsive Design - ÖZELLİKLE MOBİL İÇİN */
+        /* Responsive Design */
         @media (max-width: 768px) {
             body {
                 padding: 12px;
-                padding-top: 45px; /* Ana uygulama linki için alan */
+                padding-top: 45px; /* PWA banner için alan */
             }
             
             .main-container {
@@ -407,12 +478,19 @@
             }
             
             .logo-title {
-                font-size: 3rem;
+                font-size: 2.8rem;
                 margin-bottom: 0.3rem;
             }
             
             .logo-subtitle {
-                font-size: 1rem;
+                font-size: 0.95rem;
+                flex-direction: column;
+                gap: 0.3rem;
+            }
+            
+            .ai-badge {
+                font-size: 10px;
+                padding: 3px 10px;
             }
             
             .logo-section::before {
@@ -454,19 +532,34 @@
                 padding: 0.9rem 1rem;
                 font-size: 0.9rem;
             }
+            
+            .pwa-install-content {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .pwa-install-text {
+                font-size: 13px;
+            }
         }
         
         @media (max-width: 480px) {
             body {
                 padding: 10px;
+                padding-top: 60px;
             }
             
             .logo-title {
-                font-size: 2.5rem;
+                font-size: 2.3rem;
             }
             
             .logo-subtitle {
-                font-size: 0.9rem;
+                font-size: 0.85rem;
+            }
+            
+            .ai-badge {
+                font-size: 9px;
+                padding: 2px 8px;
             }
             
             .logo-section::before {
@@ -527,11 +620,11 @@
         
         @media (max-width: 360px) {
             .logo-title {
-                font-size: 2.2rem;
+                font-size: 2rem;
             }
             
             .logo-subtitle {
-                font-size: 0.85rem;
+                font-size: 0.8rem;
             }
             
             .search-input {
@@ -562,30 +655,23 @@
                 padding: 1rem;
             }
         }
-        
-        /* Çok küçük ekranlar için ekstra ayarlar */
-        @media (max-width: 320px) {
-            .logo-title {
-                font-size: 2rem;
-            }
-            
-            .search-input {
-                padding: 10px 12px;
-            }
-            
-            .result-header {
-                flex-direction: column;
-                gap: 0.3rem;
-                text-align: center;
-            }
-            
-            .result-header .badge {
-                margin: 0.3rem 0 0 0;
-            }
-        }
     </style>
 </head>
 <body>
+    <!-- PWA Install Banner -->
+    <div class="pwa-install-banner" id="pwa-install-banner">
+        <div class="pwa-install-content">
+            <div class="pwa-install-text">
+                <i class="fas fa-download"></i>
+                "Şeyma'ya Sor"u telefonunuza yükleyin!
+            </div>
+            <div class="pwa-install-buttons">
+                <button class="pwa-install-btn" id="pwa-install-btn">Yükle</button>
+                <button class="pwa-dismiss-btn" id="pwa-dismiss-btn">Kapat</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Ana Uygulama Linki -->
     <a href="{% url 'home' %}" class="main-app-link">
         <i class="fas fa-home"></i> Ana Uygulama
@@ -595,8 +681,11 @@
         <div class="content-wrapper">
             <!-- Logo Section -->
             <div class="logo-section fade-in-up">
-                <h1 class="logo-title">Şeyma</h1>
-                <p class="logo-subtitle">Kur'an Öğretmeni & Hafız</p>
+                <h1 class="logo-title">🤖 Şeyma'ya Sor</h1>
+                <div class="logo-subtitle">
+                    <span>AI Destekli Asistan</span>
+                    <span class="ai-badge">YAPAY ZEKA</span>
+                </div>
             </div>
             
             <!-- Search Form -->
@@ -640,8 +729,8 @@
                         </div>
                     </div>
                     <div class="result-footer">
-                        <i class="fas fa-info-circle"></i>
-                        Şeyma'nın bilgi ve tecrübesiyle cevaplanmıştır
+                        <i class="fas fa-robot"></i>
+                        AI ile desteklenen yanıt
                     </div>
                 </div>
                 {% endif %}
@@ -655,6 +744,8 @@
                     <div class="example-question">Hafızlık için tavsiyelerin neler?</div>
                     <div class="example-question">İbadetlerimi nasıl düzene sokabilirim?</div>
                     <div class="example-question">Motivasyonumu nasıl yüksek tutarım?</div>
+                    <div class="example-question">Namaz kılmayı nasıl öğrenebilirim?</div>
+                    <div class="example-question">Dua ve zikirler hakkında bilgi ver</div>
                 </div>
             </div>
             
@@ -662,12 +753,12 @@
             <div class="info-box fade-in-up">
                 <h5 class="info-title">
                     <i class="fas fa-robot float"></i>
-                    AI Destekli Yanıt Sistemi
+                    Şeyma AI Asistan Hakkında
                 </h5>
                 <p class="info-text">
-                    Şeyma, Kur'an öğretmenliği ve hafızlık tecrübesiyle size en doğru bilgileri sunar. 
-                    Sorularınızı çekinmeden sorabilirsiniz! Her sorunuz özenle cevaplanır ve kişiselleştirilmiş
-                    tavsiyeler alırsınız.
+                    Bu uygulama Şeyma öğretmenin bilgi ve tecrübesiyle geliştirilmiş yapay zeka destekli
+                    bir asistanıdır. Kur'an öğrenimi, hafızlık, namaz, dua ve diğer İslami konular hakkında
+                    sorularınızı sorabilir, kişiselleştirilmiş tavsiyeler alabilirsiniz.
                 </p>
             </div>
         </div>
@@ -684,6 +775,60 @@
         const loadingSpinner = document.getElementById('loading-spinner');
         const submitBtn = document.getElementById('submit-btn');
         
+        // Service Worker'ı kaydet
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw-seyma-sor.js')
+                .then(registration => {
+                    console.log('SW registered: ', registration);
+                })
+                .catch(registrationError => {
+                    console.log('SW registration failed: ', registrationError);
+                });
+        }
+        
+        // PWA Install Logic
+        let deferredPrompt;
+        const installBanner = document.getElementById('pwa-install-banner');
+        const installBtn = document.getElementById('pwa-install-btn');
+        const dismissBtn = document.getElementById('pwa-dismiss-btn');
+        
+        // PWA kurulabilirlik kontrolü
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Banner'ı göster (sadece mobilde)
+            if (isMobileDevice()) {
+                installBanner.classList.add('show');
+            }
+        });
+        
+        // Install butonu tıklandığında
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    console.log('PWA installed');
+                }
+                
+                deferredPrompt = null;
+                installBanner.classList.remove('show');
+            }
+        });
+        
+        // Dismiss butonu
+        dismissBtn.addEventListener('click', () => {
+            installBanner.classList.remove('show');
+            localStorage.setItem('pwa-dismissed', 'true');
+        });
+        
+        // Daha önce dismiss edilmişse banner'ı gösterme
+        if (localStorage.getItem('pwa-dismissed') === 'true') {
+            installBanner.classList.remove('show');
+        }
+        
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -696,7 +841,7 @@
             submitBtn.disabled = true;
             
             // AJAX isteği gönder
-            fetch('{% url "arama_motoru" %}', {
+            fetch('{% url "seyma_sor_pwa" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -743,8 +888,8 @@
                                 <div class="cevap-container">${data.cevap}</div>
                             </div>
                             <div class="result-footer">
-                                <i class="fas fa-info-circle"></i>
-                                Şeyma'nın bilgi ve tecrübesiyle cevaplanmıştır
+                                <i class="fas fa-robot"></i>
+                                AI ile desteklenen yanıt
                             </div>
                         </div>
                     `;
@@ -802,48 +947,6 @@
                 }
             }
             return cookieValue;
-        }
-        
-        // Service Worker'ı kaydet
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw-seyma-sor.js')
-                .then(registration => {
-                    console.log('SW registered: ', registration);
-                })
-                .catch(registrationError => {
-                    console.log('SW registration failed: ', registrationError);
-                });
-        }
-        
-        // PWA Install Logic
-        let deferredPrompt;
-        
-        // PWA kurulabilirlik kontrolü
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Ana uygulamadan farklı olarak direkt yükleme teklif et
-            if (isMobileDevice()) {
-                showInstallPrompt();
-            }
-        });
-        
-        function showInstallPrompt() {
-            if (deferredPrompt) {
-                // Kullanıcıya PWA yüklemesini teklif et
-                const installPrompt = confirm('🤖 "Şeyma\'ya Sor" uygulamasını telefonunuza yüklemek ister misiniz?\n\nBu sayede ana uygulamadan ayrı olarak hızlıca AI asistana erişebilirsiniz!');
-                
-                if (installPrompt) {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            console.log('Şeyma\'ya Sor PWA installed');
-                        }
-                        deferredPrompt = null;
-                    });
-                }
-            }
         }
         
         // Animasyonları başlat

@@ -309,10 +309,60 @@
       margin-top: 4rem;
     }
     
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    
     footer p {
       margin: 0;
       font-size: 1rem;
       opacity: 0.9;
+    }
+    
+    /* PWA Install Button */
+    .pwa-install-mobile {
+      display: none; /* Varsayılan olarak gizli */
+    }
+    
+    .btn-pwa-install {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      cursor: pointer;
+    }
+    
+    .btn-pwa-install:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    }
+    
+    /* Mobil cihazlarda PWA butonunu göster */
+    @media (max-width: 768px) {
+      .pwa-install-mobile {
+        display: block !important;
+      }
+    }
+    
+    /* Touch cihazlarda PWA butonunu göster */
+    @media (pointer: coarse) {
+      .pwa-install-mobile {
+        display: block !important;
+      }
     }
     
     /* Animasyonlar */
@@ -451,11 +501,6 @@
               <i class="fas fa-envelope"></i>İletişim
             </a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/pwa-test/">
-              <i class="fas fa-mobile-alt"></i>PWA Test
-            </a>
-          </li>
         </ul>
 
         <!-- Arama Formu -->
@@ -492,7 +537,17 @@
 
   <!-- Footer -->
   <footer>
-    <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
+    <div class="footer-content">
+      <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
+      
+      <!-- PWA Ana Ekrana Ekle Butonu - Sadece Mobilde -->
+      <div id="pwa-install-container" class="pwa-install-mobile">
+        <button id="pwa-install-btn" class="btn-pwa-install">
+          <i class="fas fa-download"></i>
+          <span>Ana Ekrana Ekle</span>
+        </button>
+      </div>
+    </div>
   </footer>
 
   <!-- Bootstrap JS -->
@@ -529,7 +584,7 @@
   });
   </script>
 
-  <!-- PWA Service Worker -->
+  <!-- PWA Service Worker ve Bildirimler -->
   <script>
     // Service Worker'ı kaydet
     if ('serviceWorker' in navigator) {
@@ -544,60 +599,160 @@
       });
     }
 
-    // PWA yükleme prompt'u
+    // PWA ve Bildirim yönetimi
     let deferredPrompt;
-    let installButton = null;
+    const pwaButton = document.getElementById('pwa-install-btn');
 
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('PWA kurulum prompt\'u hazır');
       e.preventDefault();
       deferredPrompt = e;
-      showInstallButton();
+      
+      // Mobil cihazlarda butonu göster
+      if (window.matchMedia('(max-width: 768px)').matches || 
+          window.matchMedia('(pointer: coarse)').matches) {
+        document.getElementById('pwa-install-container').style.display = 'block';
+      }
     });
 
-    function showInstallButton() {
-      // Ana ekrana ekle butonu oluştur
-      if (!installButton) {
-        installButton = document.createElement('button');
-        installButton.innerHTML = '<i class="fas fa-download"></i> Ana Ekrana Ekle';
-        installButton.className = 'btn btn-primary btn-sm position-fixed';
-        installButton.style.cssText = 'top: 20px; right: 20px; z-index: 1000; border-radius: 25px; padding: 8px 15px; font-size: 12px; box-shadow: 0 4px 15px rgba(0,123,255,0.3);';
-        installButton.onclick = installPWA;
-        document.body.appendChild(installButton);
-
-        // 10 saniye sonra otomatik gizle
-        setTimeout(() => {
-          if (installButton) {
-            installButton.style.opacity = '0.7';
-          }
-        }, 10000);
-      }
+    // PWA install butonu tıklama
+    if (pwaButton) {
+      pwaButton.addEventListener('click', installPWA);
     }
 
     function installPWA() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('Kullanıcı PWA kurulumunu kabul etti');
+      // İki seçenek sun: Ana uygulama ve Şeyma'ya Sor
+      const choice = confirm('📱 Hangi uygulamayı yüklemek istiyorsuniz?\n\n' +
+                           'OK = Ana Uygulama (Şeyma - Öğrenci Yönetimi)\n' +
+                           'İptal = Şeyma\'ya Sor (AI Asistan)');
+      
+      if (choice) {
+        // Ana uygulama yükle
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('Ana uygulama PWA kuruldu');
+              requestNotificationPermission();
+            } else {
+              console.log('Ana uygulama PWA kurulumu reddedildi');
+            }
+            deferredPrompt = null;
+            document.getElementById('pwa-install-container').style.display = 'none';
+          });
+        }
+      } else {
+        // Şeyma'ya Sor uygulamasına yönlendir
+        const newWindow = window.open('/arama-motoru/', '_blank');
+        if (newWindow) {
+          newWindow.focus();
+          // Kısa süre sonra pencereyi kapat ve kullanıcıyı bilgilendir
+          setTimeout(() => {
+            alert('🤖 "Şeyma\'ya Sor" sayfası açıldı!\n\n' +
+                  'Bu sayfadan AI asistan uygulamasını ana ekranınıza ekleyebilirsiniz.');
+          }, 1000);
+        } else {
+          // Popup engellenirse direkt yönlendir
+          window.location.href = '/arama-motoru/';
+        }
+      }
+    }
+
+    // Bildirim izni isteme
+    window.addEventListener('appinstalled', (evt) => {
+      console.log('PWA başarıyla kuruldu');
+      document.getElementById('pwa-install-container').style.display = 'none';
+      // Bildirim izni iste
+      requestNotificationPermission();
+    });
+
+    // Bildirim izni isteme
+    function requestNotificationPermission() {
+      if ('Notification' in window && 'serviceWorker' in navigator) {
+        Notification.requestPermission().then(function(permission) {
+          if (permission === 'granted') {
+            console.log('Bildirim izni verildi');
+            // Service Worker'a abonelik oluştur
+            subscribeToNotifications();
+            // Hoş geldin bildirimi gönder
+            showWelcomeNotification();
           } else {
-            console.log('Kullanıcı PWA kurulumunu reddetti');
-          }
-          deferredPrompt = null;
-          if (installButton) {
-            installButton.remove();
-            installButton = null;
+            console.log('Bildirim izni reddedildi');
           }
         });
       }
     }
 
-    // PWA kurulduğunda butonu gizle
-    window.addEventListener('appinstalled', (evt) => {
-      console.log('PWA başarıyla kuruldu');
-      if (installButton) {
-        installButton.remove();
-        installButton = null;
+    // Bildirim aboneliği oluştur
+    function subscribeToNotifications() {
+      navigator.serviceWorker.ready.then(function(registration) {
+        // VAPID public key (gerçek projede environment'dan alınmalı)
+        const publicKey = 'BEl62iUYgUivxIkv69yViEuiBIa40HI80NqIczikzy4fgMr09Ix_OUYt-JzBH6SDLtRmWL_i1PLRJHcGzXOaXW8';
+        
+        registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        }).then(function(subscription) {
+          console.log('Push aboneliği oluşturuldu:', subscription);
+          
+          // Abonelik bilgilerini sunucuya gönder
+          fetch('/api/bildirim-abonelik/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(subscription)
+          }).then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                console.log('Abonelik sunucuya kaydedildi');
+              } else {
+                console.error('Abonelik kaydetme hatası:', data.error);
+              }
+            });
+        });
+      });
+    }
+
+    // VAPID key'i uint8array'e çevir
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    // Hoş geldin bildirimi
+    function showWelcomeNotification() {
+      navigator.serviceWorker.ready.then(function(registration) {
+        registration.showNotification('Şeyma - Hoş Geldiniz! 🎉', {
+          body: 'Artık günlük kişisel mesajlarınızı ve öğrenci durumu bildirimlerini alabilirsiniz.',
+          icon: '/static/pwa/icon-192x192.png',
+          badge: '/static/pwa/icon-72x72.png',
+          tag: 'welcome'
+        });
+      });
+    }
+
+    // Sayfa yüklendiğinde mobil kontrolü yap
+    window.addEventListener('load', function() {
+      // Eğer mobil cihazsa ve daha önce kurulmamışsa butonu göster
+      if ((window.matchMedia('(max-width: 768px)').matches || 
+           window.matchMedia('(pointer: coarse)').matches) &&
+          !window.matchMedia('(display-mode: standalone)').matches) {
+        
+        // Kısa bir gecikme ile göster (sayfa yüklendikten sonra)
+        setTimeout(() => {
+          document.getElementById('pwa-install-container').style.display = 'block';
+        }, 2000);
       }
     });
   </script>

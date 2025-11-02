@@ -24,10 +24,10 @@ class yazi(models.Model):
     title = models.CharField(max_length=50)
     description = models.TextField()
     imageUrl = models.ImageField(upload_to='uploads', blank=True, null=True)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField()  # Manuel tarih - yedekten gelen orijinal tarih
     isActive = models.BooleanField(default=True)
     slug = models.SlugField(default="", null=False,unique=True,db_index=True)
-    tarih = models.DateTimeField(auto_now_add=True)
+    tarih = models.DateTimeField(auto_now_add=True)  # Otomatik oluşturulma tarihi
     category = models.ForeignKey(category,default=1, on_delete=models.CASCADE)
     
     def save(self, *args, **kwargs):
