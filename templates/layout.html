@@ -351,10 +351,47 @@
       background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
     }
     
+    .btn-pwa-ask {
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%) !important;
+      box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3) !important;
+    }
+    
+    .btn-pwa-ask:hover {
+      background: linear-gradient(135deg, #ff8a80 0%, #fec5ea 100%) !important;
+      box-shadow: 0 8px 25px rgba(255, 154, 158, 0.4) !important;
+    }
+    
+    .pwa-install-mobile {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
     /* Mobil cihazlarda PWA butonunu göster */
     @media (max-width: 768px) {
       .pwa-install-mobile {
-        display: block !important;
+        display: flex !important;
+      }
+      
+      .btn-pwa-install {
+        font-size: 12px;
+        padding: 10px 16px;
+        flex: 1;
+        min-width: 140px;
+        justify-content: center;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .pwa-install-mobile {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .btn-pwa-install {
+        font-size: 11px;
+        padding: 8px 14px;
       }
     }
     
@@ -540,11 +577,15 @@
     <div class="footer-content">
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
       
-      <!-- PWA Ana Ekrana Ekle Butonu - Sadece Mobilde -->
+      <!-- PWA Ana Ekrana Ekle Butonları - Sadece Mobilde -->
       <div id="pwa-install-container" class="pwa-install-mobile">
         <button id="pwa-install-btn" class="btn-pwa-install">
           <i class="fas fa-download"></i>
-          <span>Ana Ekrana Ekle</span>
+          <span>Ana Uygulama Yükle</span>
+        </button>
+        <button id="seyma-ask-install-btn" class="btn-pwa-install btn-pwa-ask">
+          <i class="fas fa-robot"></i>
+          <span>Şeyma'ya Sor Yükle</span>
         </button>
       </div>
     </div>
@@ -602,85 +643,65 @@
     // PWA ve Bildirim yönetimi
     let deferredPrompt;
     const pwaButton = document.getElementById('pwa-install-btn');
+    const seymaAskButton = document.getElementById('seyma-ask-install-btn');
 
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('PWA kurulum prompt\'u hazır');
       e.preventDefault();
       deferredPrompt = e;
       
-      // Mobil cihazlarda butonu göster
+      // Mobil cihazlarda butonları göster
       if (window.matchMedia('(max-width: 768px)').matches || 
           window.matchMedia('(pointer: coarse)').matches) {
-        document.getElementById('pwa-install-container').style.display = 'block';
+        document.getElementById('pwa-install-container').style.display = 'flex';
       }
     });
 
-    // PWA install butonu tıklama
+    // Ana uygulama PWA install butonu
     if (pwaButton) {
-      pwaButton.addEventListener('click', installPWA);
+      pwaButton.addEventListener('click', installMainPWA);
+    }
+    
+    // Şeyma'ya Sor PWA install butonu
+    if (seymaAskButton) {
+      seymaAskButton.addEventListener('click', installSeymaAskPWA);
     }
 
-    function installPWA() {
-      // Sıralı kurulum: Önce ana uygulama, sonra Şeyma'ya Sor
-      installMainApp();
-    }
-
-    function installMainApp() {
+    function installMainPWA() {
       if (deferredPrompt) {
-        // Ana uygulama kurulumu
-        console.log('Ana uygulama kurulumu başlatılıyor...');
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
             console.log('Ana uygulama PWA kuruldu');
-            // Ana uygulama kurulduktan sonra Şeyma'ya Sor kurulumunu başlat
-            setTimeout(() => {
-              installSeymaAskApp();
-            }, 2000);
+            alert('✅ Ana uygulama başarıyla ana ekranınıza eklendi!');
+            // Bildirim izni iste
+            requestNotificationPermission();
           } else {
             console.log('Ana uygulama PWA kurulumu reddedildi');
-            // Ana uygulama reddedilse bile Şeyma'ya Sor'u teklif et
-            setTimeout(() => {
-              installSeymaAskApp();
-            }, 1000);
           }
           deferredPrompt = null;
         });
       } else {
-        // Ana uygulama prompt'u yoksa direkt Şeyma'ya Sor'a geç
-        installSeymaAskApp();
+        // PWA prompt yoksa manuel kurulum bilgisi göster
+        alert('📱 Ana uygulamayı ana ekranınıza eklemek için:\n\n• Chrome/Edge: Sağ üst menü > "Ana ekrana ekle"\n• Safari: Paylaş butonu > "Ana Ekrana Ekle"\n• Firefox: Adres çubuğu yanındaki + simgesi');
+        requestNotificationPermission();
       }
     }
 
-    function installSeymaAskApp() {
-      // Şeyma'ya Sor uygulaması için yeni sekme aç
-      const askChoice = confirm('🤖 "Şeyma\'ya Sor" AI Asistan uygulamasını da yüklemek ister misiniz?\n\n' +
-                               'Bu uygulama ile AI destekli sorularınızı hızlıca sorabilirsiniz.');
-      
-      if (askChoice) {
-        // Yeni sekmede Şeyma'ya Sor'u aç
-        const newWindow = window.open('/arama-motoru/', '_blank');
-        if (newWindow) {
-          newWindow.focus();
-          // Kullanıcıyı bilgilendir
-          setTimeout(() => {
-            alert('✅ İki uygulama da hazır!\n\n' +
-                  '📱 Ana Uygulama: Öğrenci yönetimi\n' +
-                  '🤖 Şeyma\'ya Sor: AI Asistan\n\n' +
-                  'Açılan sekmeden "Şeyma\'ya Sor" uygulamasını da ana ekranınıza ekleyebilirsiniz.');
-          }, 2000);
-        } else {
-          // Popup engellenirse direkt yönlendir
-          window.location.href = '/arama-motoru/';
-        }
+    function installSeymaAskPWA() {
+      // Şeyma'ya Sor sayfasını yeni sekmede aç
+      const newWindow = window.open('/arama-motoru/', '_blank');
+      if (newWindow) {
+        newWindow.focus();
+        // Kullanıcıyı bilgilendir
+        setTimeout(() => {
+          alert('🤖 "Şeyma\'ya Sor" sayfası açıldı!\n\nAçılan sekmeden AI asistan uygulamasını ana ekranınıza ekleyebilirsiniz.');
+        }, 1500);
       } else {
-        // Şeyma'ya Sor reddedildiyse tamamlandı mesajı
-        alert('✅ Ana uygulama kurulumu tamamlandı!\n\n' +
-              'İsterseniz daha sonra menüden "Şeyma\'ya Sor" AI asistanını da kullanabilirsiniz.');
+        // Popup engellenirse direkt yönlendir
+        alert('🤖 "Şeyma\'ya Sor" sayfasına yönlendiriliyorsunuz...');
+        window.location.href = '/arama-motoru/';
       }
-      
-      // PWA install container'ı gizle
-      document.getElementById('pwa-install-container').style.display = 'none';
     }
 
     // Bildirim izni isteme
