@@ -1,0 +1,6 @@
+<svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="72" height="72" rx="16" fill="#007bff"/>
+<path d="M36 16C44.8366 16 52 23.1634 52 32V48C52 52.4183 48.4183 56 44 56H28C23.5817 56 20 52.4183 20 48V32C20 23.1634 27.1634 16 36 16Z" fill="white"/>
+<path d="M36 24C40.4183 24 44 27.5817 44 32V40C44 42.2091 42.2091 44 40 44H32C29.7909 44 28 42.2091 28 40V32C28 27.5817 31.5817 24 36 24Z" fill="#007bff"/>
+<text x="36" y="38" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Ş</text>
+</svg>

@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block page_title %}PWA Test - Şeyma{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>PWA Test Sayfası</h4>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Bu sayfa PWA (Progressive Web App) özelliklerini test etmek için oluşturulmuştur.
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="card bg-light">
+                <div class="card-body text-center">
+                  <i class="fas fa-download fa-2x text-primary mb-2"></i>
+                  <h6>Ana Ekrana Ekle</h6>
+                  <p class="small text-muted">Siteyi ana ekranınıza uygulama olarak ekleyebilirsiniz</p>
+                  <button class="btn btn-primary btn-sm" onclick="triggerInstall()">
+                    <i class="fas fa-plus me-1"></i>Ekle
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card bg-light">
+                <div class="card-body text-center">
+                  <i class="fas fa-wifi-slash fa-2x text-warning mb-2"></i>
+                  <h6>Offline Çalışma</h6>
+                  <p class="small text-muted">İnternet olmadan da bazı sayfalar çalışır</p>
+                  <a href="/offline/" class="btn btn-warning btn-sm">
+                    <i class="fas fa-eye me-1"></i>Test Et
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-12">
+              <h6>PWA Kontrol Listesi:</h6>
+              <ul class="list-group">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Manifest Dosyası
+                  <span class="badge bg-success rounded-pill" id="manifest-check">✓</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Service Worker
+                  <span class="badge bg-success rounded-pill" id="sw-check">✓</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  HTTPS (Development)
+                  <span class="badge bg-warning rounded-pill">DEV</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Responsive Design
+                  <span class="badge bg-success rounded-pill">✓</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  App Icons
+                  <span class="badge bg-success rounded-pill">✓</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="alert alert-warning">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>Önemli Notlar:</h6>
+            <ul class="mb-0">
+              <li>PWA özelliklerini tam olarak test etmek için HTTPS gereklidir</li>
+              <li>Chrome Developer Tools > Application > Manifest sekmesinden kontrol edebilirsiniz</li>
+              <li>Ana ekrana ekleme özelliği Chrome, Safari ve Edge'de çalışır</li>
+              <li>Service Worker Console'da log mesajları gösterir</li>
+            </ul>
+          </div>
+
+          <div class="text-center">
+            <a href="/" class="btn btn-outline-primary">
+              <i class="fas fa-home me-2"></i>Ana Sayfaya Dön
+            </a>
+            <a href="/admin-paneli/" class="btn btn-outline-secondary ms-2">
+              <i class="fas fa-cog me-2"></i>Admin Panel
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// PWA kontrolleri
+document.addEventListener('DOMContentLoaded', function() {
+  // Manifest kontrolü
+  fetch('/static/manifest.json')
+    .then(response => {
+      if (response.ok) {
+        document.getElementById('manifest-check').textContent = '✓';
+        document.getElementById('manifest-check').className = 'badge bg-success rounded-pill';
+      } else {
+        document.getElementById('manifest-check').textContent = '✗';
+        document.getElementById('manifest-check').className = 'badge bg-danger rounded-pill';
+      }
+    })
+    .catch(() => {
+      document.getElementById('manifest-check').textContent = '✗';
+      document.getElementById('manifest-check').className = 'badge bg-danger rounded-pill';
+    });
+
+  // Service Worker kontrolü
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistration()
+      .then(registration => {
+        if (registration) {
+          document.getElementById('sw-check').textContent = '✓';
+          document.getElementById('sw-check').className = 'badge bg-success rounded-pill';
+        } else {
+          document.getElementById('sw-check').textContent = '✗';
+          document.getElementById('sw-check').className = 'badge bg-danger rounded-pill';
+        }
+      });
+  } else {
+    document.getElementById('sw-check').textContent = '✗';
+    document.getElementById('sw-check').className = 'badge bg-danger rounded-pill';
+  }
+});
+
+function triggerInstall() {
+  // Global deferredPrompt varsa kullan
+  if (window.deferredPrompt) {
+    window.deferredPrompt.prompt();
+  } else {
+    alert('PWA kurulum prompt\'u henüz hazır değil. Lütfen birkaç saniye bekleyin ve tekrar deneyin.');
+  }
+}
+</script>
+{% endblock %}
