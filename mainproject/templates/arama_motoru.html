@@ -823,41 +823,71 @@
             e.preventDefault();
             deferredPrompt = e;
             
-            // Ana uygulamadan farklı olarak direkt yükleme teklif et
-            if (isMobileDevice()) {
-                showInstallPrompt();
+            // URL'de pwa_install parametresi varsa otomatik kurulum başlat
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('pwa_install') === '1') {
+                setTimeout(() => {
+                    showInstallPrompt();
+                }, 1000);
+            } else if (isMobileDevice()) {
+                // Normal durumlarda mobilde teklif et
+                setTimeout(() => {
+                    showInstallPrompt();
+                }, 3000);
             }
         });
         
+        // Sayfa yüklendiğinde PWA kurulum parametresini kontrol et
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('pwa_install') === '1') {
+            // beforeinstallprompt henüz gelmemişse bekle
+            setTimeout(() => {
+                if (deferredPrompt) {
+                    showInstallPrompt();
+                } else {
+                    // Prompt yoksa manuel kurulum rehberi göster
+                    showManualInstallInstructions();
+                }
+            }, 2000);
+        }
+        
         function showInstallPrompt() {
             if (deferredPrompt) {
-                // Kullanıcıya PWA yüklemesini teklif et
-                const installPrompt = confirm('🤖 "Şeyma\'ya Sor" AI Asistan uygulamasını ana ekranınıza eklemek ister misiniz?\n\n' +
-                                            'Bu uygulama ana uygulamadan ayrı olarak çalışır ve hızlıca AI asistana erişmenizi sağlar.');
-                
-                if (installPrompt) {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            console.log('Şeyma\'ya Sor PWA kuruldu');
-                            alert('✅ "Şeyma\'ya Sor" başarıyla ana ekranınıza eklendi!\n\n' +
-                                  'Artık ana ekranınızdan direkt AI asistana erişebilirsiniz.');
-                        } else {
-                            console.log('Şeyma\'ya Sor PWA kurulumu reddedildi');
-                        }
-                        deferredPrompt = null;
-                    });
-                } else {
-                    // Kullanıcı reddetse de daha sonra manuel kurulum yapabilir
-                    alert('💡 İsterseniz tarayıcı menüsünden "Ana ekrana ekle" seçeneğini kullanabilirsiniz.');
-                }
+                console.log('Şeyma\'ya Sor PWA prompt gösteriliyor');
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Şeyma\'ya Sor PWA kuruldu');
+                        alert('✅ "Şeyma\'ya Sor" başarıyla ana ekranınıza eklendi!\n\n' +
+                              'Artık ana ekranınızdan direkt AI asistana erişebilirsiniz.');
+                    } else {
+                        console.log('Şeyma\'ya Sor PWA kurulumu reddedildi');
+                        showManualInstallInstructions();
+                    }
+                    deferredPrompt = null;
+                });
             } else {
-                // PWA prompt yoksa manuel kurulum rehberi göster
-                alert('📱 Bu uygulamayı ana ekranınıza eklemek için:\n\n' +
-                      '• Chrome/Edge: Sağ üst menü > "Ana ekrana ekle"\n' +
-                      '• Safari: Paylaş butonu > "Ana Ekrana Ekle"\n' +
-                      '• Firefox: Adres çubuğu yanındaki + simgesi');
+                showManualInstallInstructions();
             }
+        }
+        
+        function showManualInstallInstructions() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            let instructions = '';
+            
+            if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
+                instructions = '🤖 Chrome\'da "Şeyma\'ya Sor"u Ana Ekrana Eklemek İçin:\n\n1. Adres çubuğunda "Yükle" simgesini arayın\n2. Veya sağ üst ⋮ menü > "Ana ekrana ekle"\n3. "Ekle" butonuna basın';
+            } else if (userAgent.includes('safari')) {
+                instructions = '🤖 Safari\'de "Şeyma\'ya Sor"u Ana Ekrana Eklemek İçin:\n\n1. Alttaki paylaş butonunu (📤) tıklayın\n2. "Ana Ekrana Ekle" seçeneğini bulun\n3. İsmi "Şeyma\'ya Sor" olarak değiştirin\n4. "Ekle" butonuna basın';
+            } else if (userAgent.includes('firefox')) {
+                instructions = '🤖 Firefox\'ta "Şeyma\'ya Sor"u Ana Ekrana Eklemek İçin:\n\n1. Sağ üst ☰ menü > "Ana sayfaya ekle"\n2. Veya adres çubuğu yanındaki + simgesi\n3. "Ekle" butonuna basın';
+            } else if (userAgent.includes('edg')) {
+                instructions = '🤖 Edge\'de "Şeyma\'ya Sor"u Ana Ekrana Eklemek İçin:\n\n1. Sağ üst ⋯ menü > "Uygulamalar"\n2. "Bu siteyi uygulama olarak yükle"\n3. "Yükle" butonuna basın';
+            } else {
+                instructions = '🤖 "Şeyma\'ya Sor"u Ana Ekrana Eklemek İçin:\n\n1. Tarayıcı menüsünü açın\n2. "Ana ekrana ekle" veya "Uygulama olarak yükle" seçeneğini arayın\n3. Kurulum talimatlarını takip edin';
+            }
+            
+            alert(instructions);
         }
         
         // Animasyonları başlat

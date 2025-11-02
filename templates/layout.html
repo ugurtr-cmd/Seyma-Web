@@ -361,8 +361,9 @@
       box-shadow: 0 8px 25px rgba(255, 154, 158, 0.4) !important;
     }
     
+    /* PWA Butonları için Debug - Hep göster */
     .pwa-install-mobile {
-      display: flex;
+      display: flex !important;
       gap: 10px;
       flex-wrap: wrap;
       justify-content: center;
@@ -654,7 +655,40 @@
       if (window.matchMedia('(max-width: 768px)').matches || 
           window.matchMedia('(pointer: coarse)').matches) {
         document.getElementById('pwa-install-container').style.display = 'flex';
+        console.log('PWA butonları mobilde gösterildi');
       }
+    });
+
+    // Her zaman butonları göster mobilde (PWA prompt olmasa bile)
+    if (window.matchMedia('(max-width: 768px)').matches || 
+        window.matchMedia('(pointer: coarse)').matches) {
+      document.getElementById('pwa-install-container').style.display = 'flex';
+      console.log('PWA butonları her zaman gösterildi (mobil)');
+    }
+
+    // PWA Debug Information
+    console.log('=== PWA Debug Information ===');
+    console.log('User Agent:', navigator.userAgent);
+    console.log('Service Worker Support:', 'serviceWorker' in navigator);
+    console.log('Manifest Links:', document.querySelectorAll('link[rel="manifest"]').length);
+    console.log('Window Width:', window.innerWidth);
+    console.log('Is Mobile:', window.matchMedia('(max-width: 768px)').matches);
+    console.log('Is Touch Device:', window.matchMedia('(pointer: coarse)').matches);
+    
+    // Service Worker durumunu kontrol et
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        console.log('Active Service Workers:', registrations.length);
+        registrations.forEach((registration, index) => {
+          console.log(`SW ${index + 1}:`, registration.scope);
+        });
+      });
+    }
+
+    // PWA kurulabilirlik durumunu kontrol et
+    window.addEventListener('appinstalled', (evt) => {
+      console.log('PWA başarıyla kuruldu');
+      alert('🎉 Uygulama ana ekranınıza başarıyla eklendi!');
     });
 
     // Ana uygulama PWA install butonu
@@ -668,7 +702,10 @@
     }
 
     function installMainPWA() {
+      console.log('Ana uygulama kurulum fonksiyonu çağrıldı');
+      
       if (deferredPrompt) {
+        console.log('Ana uygulama PWA prompt kullanılıyor');
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
@@ -678,30 +715,101 @@
             requestNotificationPermission();
           } else {
             console.log('Ana uygulama PWA kurulumu reddedildi');
+            showInstallInstructions();
           }
           deferredPrompt = null;
         });
       } else {
-        // PWA prompt yoksa manuel kurulum bilgisi göster
-        alert('📱 Ana uygulamayı ana ekranınıza eklemek için:\n\n• Chrome/Edge: Sağ üst menü > "Ana ekrana ekle"\n• Safari: Paylaş butonu > "Ana Ekrana Ekle"\n• Firefox: Adres çubuğu yanındaki + simgesi');
-        requestNotificationPermission();
+        console.log('Ana uygulama manuel kurulum tetikleniyor');
+        
+        // Tarayıcının PWA installability criteria'sını kontrol et
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(() => {
+            console.log('Service Worker hazır, PWA kurulumuna devam');
+            
+            // Manifest URL'ini kontrol et
+            const manifestLinks = document.querySelectorAll('link[rel="manifest"]');
+            if (manifestLinks.length > 0) {
+              console.log('Manifest bulundu, kurulum criteria karşılanmış olmalı');
+              
+              // Kısa bir süre bekle ve tekrar dene
+              setTimeout(() => {
+                if (window.BeforeInstallPromptEvent) {
+                  console.log('BeforeInstallPromptEvent mevcut');
+                }
+                
+                // Chrome'da programmatik olarak kurulum tetiklemeye çalış
+                if (window.chrome) {
+                  // Chrome API'leri ile kurulum tetikleme
+                  showChromeInstallInstructions();
+                } else {
+                  showInstallInstructions();
+                }
+              }, 500);
+            } else {
+              console.error('Manifest bulunamadı');
+              showInstallInstructions();
+            }
+          }).catch(error => {
+            console.error('Service Worker hatası:', error);
+            showInstallInstructions();
+          });
+        } else {
+          console.log('Service Worker desteklenmiyor');
+          showInstallInstructions();
+        }
       }
+    }
+    
+    function showChromeInstallInstructions() {
+      // Chrome'da daha spesifik talimatlar
+      alert('🚀 Ana Uygulamayı Yüklemek İçin:\n\n' +
+            '1. Adres çubuğunda "⚡ Yükle" simgesini arayın\n' +
+            '2. Veya sağ üst köşede ⋮ menü > "Ana ekrana ekle"\n' +
+            '3. "Yükle" veya "Ekle" butonuna basın\n\n' +
+            '💡 PWA kurulumu için tüm gereksinimler karşılanmış durumda!');
+      requestNotificationPermission();
     }
 
     function installSeymaAskPWA() {
-      // Şeyma'ya Sor sayfasını yeni sekmede aç
-      const newWindow = window.open('/arama-motoru/', '_blank');
+      console.log('Şeyma\'ya Sor PWA kurulumu başlatılıyor');
+      
+      // Şeyma'ya Sor sayfasını yeni sekmede aç ve PWA kurulumu için yönlendir
+      const newWindow = window.open('/arama-motoru/?pwa_install=1', '_blank');
       if (newWindow) {
         newWindow.focus();
         // Kullanıcıyı bilgilendir
         setTimeout(() => {
-          alert('🤖 "Şeyma\'ya Sor" sayfası açıldı!\n\nAçılan sekmeden AI asistan uygulamasını ana ekranınıza ekleyebilirsiniz.');
-        }, 1500);
+          alert('🤖 "Şeyma\'ya Sor" sayfası açıldı!\n\nSayfa açıldığında otomatik olarak PWA kurulum penceresi çıkacak veya manuel kurulum rehberi gösterilecek.');
+        }, 1000);
       } else {
         // Popup engellenirse direkt yönlendir
-        alert('🤖 "Şeyma\'ya Sor" sayfasına yönlendiriliyorsunuz...');
-        window.location.href = '/arama-motoru/';
+        alert('🤖 "Şeyma\'ya Sor" sayfasına yönlendiriliyorsunuz...\nSayfa açıldığında PWA kurulum seçeneklerini göreceksiniz.');
+        window.location.href = '/arama-motoru/?pwa_install=1';
       }
+    }
+
+    function showInstallInstructions() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      let instructions = '';
+      
+      if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
+        instructions = '📱 Chrome\'da Ana Ekrana Eklemek İçin:\n\n1. Sağ üst köşedeki ⋮ menüsünü açın\n2. "Ana ekrana ekle" seçeneğini tıklayın\n3. "Ekle" butonuna basın\n\nVeya adres çubuğunda çıkan "Yükle" simgesini tıklayın';
+      } else if (userAgent.includes('safari')) {
+        instructions = '📱 Safari\'de Ana Ekrana Eklemek İçin:\n\n1. Alttaki paylaş butonunu (📤) tıklayın\n2. "Ana Ekrana Ekle" seçeneğini bulun\n3. "Ekle" butonuna basın';
+      } else if (userAgent.includes('firefox')) {
+        instructions = '📱 Firefox\'ta Ana Ekrana Eklemek İçin:\n\n1. Sağ üst köşedeki ☰ menüsünü açın\n2. "Ana sayfaya ekle" seçeneğini tıklayın\n3. "Ekle" butonuna basın';
+      } else if (userAgent.includes('edg')) {
+        instructions = '📱 Edge\'de Ana Ekrana Eklemek İçin:\n\n1. Sağ üst köşedeki ⋯ menüsünü açın\n2. "Uygulamalar" > "Bu siteyi uygulama olarak yükle"\n3. "Yükle" butonuna basın';
+      } else {
+        instructions = '📱 Bu Siteyi Ana Ekrana Eklemek İçin:\n\n1. Tarayıcı menüsünü açın (⋮ veya ⋯)\n2. "Ana ekrana ekle" veya "Uygulama olarak yükle" seçeneğini arayın\n3. Kurulum talimatlarını takip edin';
+      }
+      
+      alert(instructions);
+      
+      // Bildirim izni de iste
+      requestNotificationPermission();
+    }
     }
 
     // Bildirim izni isteme

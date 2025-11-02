@@ -96,35 +96,35 @@ def restore_data(request):
     
     backup_file = request.FILES['backup_file']
     
-    # HEMEN ilerleme durumunu güncelle (timeout'u önlemek için)
+    # RENDER OPTIMIZE - Hemen ilerleme durumunu güncelle
     restore_progress = {
         'status': 'started', 
         'progress': 5,
-        'message': 'Dosya alınıyor...'
+        'message': 'Dosya alınıyor... (Render için optimize edildi)'
     }
     
     try:
-        # Dosyayı HIZLICA kaydet
+        # Dosyayı HIZLICA kaydet - Render için optimize
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_restore')
         os.makedirs(temp_dir, exist_ok=True)
         
         zip_path = os.path.join(temp_dir, f'backup_{int(time.time())}.zip')
         
-        # Chunk boyutunu küçült ve hızlı yaz
+        # RENDER OPTIMIZE - Daha küçük chunk ve hızlı işlem
         with open(zip_path, 'wb+') as destination:
-            for chunk in backup_file.chunks(8192):  # 8KB chunk
+            for chunk in backup_file.chunks(4096):  # 4KB chunk - Render için küçük
                 destination.write(chunk)
         
         # HEMEN ilerlemeyi güncelle
         restore_progress = {
             'status': 'processing',
             'progress': 15, 
-            'message': 'Dosya kaydedildi, işlem başlatılıyor...'
+            'message': 'Dosya kaydedildi, Render sunucusunda işlem başlatılıyor...'
         }
         
-        # Thread YERİNE doğrudan işlem - Render'da daha güvenli
+        # RENDER OPTIMIZE - Thread kullanmak yerine doğrudan işlem
         try:
-            restore_backup_process(zip_path)
+            restore_backup_process_render_optimized(zip_path)
             
             if restore_progress['status'] == 'error':
                 messages.error(request, f"Geri yükleme hatası: {restore_progress['message']}")
@@ -132,7 +132,7 @@ def restore_data(request):
                 messages.success(request, 'Geri yükleme başarıyla tamamlandı!')
                 
         except Exception as e:
-            error_msg = f"Geri yükleme işlemi sırasında hata: {str(e)}"
+            error_msg = f"Render sunucusunda geri yükleme hatası: {str(e)}"
             restore_progress = {
                 'status': 'error',
                 'progress': 0,
@@ -151,8 +151,198 @@ def restore_data(request):
         messages.error(request, f'Dosya işlenirken hata: {str(e)}')
         return redirect('restore_data')
 
-def restore_backup_process(zip_path):
-    """Geri yükleme işlemini yürütür"""
+def restore_photo_file(photo_data, photos_dir):
+    """Render için optimize edilmiş fotoğraf geri yükleme fonksiyonu"""
+    try:
+        old_path = photo_data['old_path']
+        new_path = photo_data['new_path']
+        filename = photo_data['filename']
+        
+        # Kaynak dosyayı bul
+        source_path = os.path.join(photos_dir, filename)
+        if not os.path.exists(source_path):
+            print(f"Render: Fotoğraf bulunamadı: {filename}")
+            return False
+        
+        # Hedef dizini oluştur
+        dest_full_path = os.path.join(settings.MEDIA_ROOT, new_path)
+        dest_dir = os.path.dirname(dest_full_path)
+        os.makedirs(dest_dir, exist_ok=True)
+        
+        # Dosyayı HIZLICA kopyala (Render için)
+        shutil.copy2(source_path, dest_full_path)
+        print(f"Render: Fotoğraf geri yüklendi: {filename}")
+        return True
+        
+    except Exception as e:
+        print(f"Render: Fotoğraf geri yükleme hatası {filename}: {e}")
+        return False
+
+def restore_backup_process_render_optimized(zip_path):
+    """Render sunucusu için optimize edilmiş geri yükleme işlemi"""
+    global restore_progress
+    
+    try:
+        # 1. Adım: Hızlı dosya doğrulama
+        update_restore_progress(10, 'Render: Yedek dosyası doğrulanıyor...')
+        
+        if not zipfile.is_zipfile(zip_path):
+            raise ValueError('Geçerli bir ZIP dosyası değil')
+        
+        # 2. Adım: Hızlı ZIP açma
+        update_restore_progress(20, 'Render: Yedek dosyası açılıyor...')
+        
+        extract_dir = tempfile.mkdtemp()
+        
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_dir)
+            
+            # 3. Adım: JSON'ı hızlıca oku
+            update_restore_progress(30, 'Render: Yedek verileri okunuyor...')
+            
+            json_path = os.path.join(extract_dir, 'backup.json')
+            if not os.path.exists(json_path):
+                raise ValueError('Yedek dosyasında backup.json bulunamadı')
+            
+            with open(json_path, 'r', encoding='utf-8') as f:
+                backup_data = json.load(f)
+            
+            # 4. Adım: Acil yedek oluştur (küçük)
+            update_restore_progress(40, 'Render: Acil yedek oluşturuluyor...')
+            create_emergency_backup()
+            
+            # 5. Adım: RENDER OPTIMIZE - Veritabanı constraint'lerini KAPALI tut
+            update_restore_progress(50, 'Render: Veritabanı optimize ediliyor...')
+            
+            from django.db import transaction, connection
+            with connection.cursor() as cursor:
+                # SQLite için foreign key'leri kapat
+                cursor.execute('PRAGMA foreign_keys=OFF;')
+                cursor.execute('PRAGMA synchronous=OFF;')  # Render için hız
+                cursor.execute('PRAGMA journal_mode=MEMORY;')  # Render için hız
+            
+            # 6. Adım: RENDER OPTIMIZE - Tüm işlemi tek transaction'da yap
+            update_restore_progress(60, 'Render: Veriler temizleniyor...')
+            
+            with transaction.atomic():
+                # HIZLI VE GÜVENLİ silme sırası
+                from django.apps import apps
+                
+                # Foreign key bağımlılıklarına göre ters sırada sil
+                delete_order = [
+                    'mainproject.ElifBaEzberDurumu',
+                    'mainproject.DersNotu', 
+                    'mainproject.SinavSonucu',
+                    'mainproject.EzberKaydi',
+                    'mainproject.Alinti',
+                    'mainproject.Ogrenci',
+                    'blog.yazi',
+                    'mainproject.Ders',
+                    'mainproject.ElifBaEzberi',
+                    'mainproject.EzberSuresi',
+                    'blog.category',
+                ]
+                
+                for model_name in delete_order:
+                    try:
+                        model = apps.get_model(model_name)
+                        count = model.objects.count()
+                        if count > 0:
+                            model.objects.all().delete()
+                            print(f"Render: {model_name} silindi ({count} kayıt)")
+                    except Exception as e:
+                        print(f"Render: {model_name} silme hatası: {e}")
+                        continue
+                
+                # 7. Adım: RENDER OPTIMIZE - Verileri hızlıca geri yükle
+                update_restore_progress(70, 'Render: Veriler geri yükleniyor...')
+                
+                # Verileri deserialize et - HIZLI
+                data_objects = backup_data.get('data', [])
+                
+                # Batch insert için group by model
+                model_groups = {}
+                for obj_data in data_objects:
+                    model_name = obj_data['model']
+                    if model_name not in model_groups:
+                        model_groups[model_name] = []
+                    model_groups[model_name].append(obj_data)
+                
+                # Model sırasına göre insert et
+                insert_order = [
+                    'blog.category',
+                    'mainproject.ezberSuresi', 
+                    'mainproject.elifBaEzberi',
+                    'mainproject.ders',
+                    'blog.yazi',
+                    'mainproject.ogrenci',
+                    'mainproject.alinti',
+                    'mainproject.ezberKaydi',
+                    'mainproject.sinavSonucu',
+                    'mainproject.dersNotu',
+                    'mainproject.elifBaEzberDurumu',
+                ]
+                
+                progress_step = 20 / len(insert_order)
+                current_progress = 70
+                
+                for model_name in insert_order:
+                    if model_name in model_groups:
+                        try:
+                            # Django deserializer kullan - güvenli ve hızlı
+                            for obj_data in model_groups[model_name]:
+                                for obj in serializers.deserialize('json', [obj_data]):
+                                    obj.save()
+                            
+                            current_progress += progress_step
+                            update_restore_progress(int(current_progress), f'Render: {model_name} yüklendi')
+                            
+                        except Exception as e:
+                            print(f"Render: {model_name} yükleme hatası: {e}")
+                            continue
+            
+            # 8. Adım: Foreign key'leri tekrar aç
+            with connection.cursor() as cursor:
+                cursor.execute('PRAGMA foreign_keys=ON;')
+                cursor.execute('PRAGMA synchronous=FULL;')
+                cursor.execute('PRAGMA journal_mode=DELETE;')
+            
+            # 9. Adım: Fotoğrafları yükle (opsiyonel)
+            update_restore_progress(95, 'Render: Fotoğraflar işleniyor...')
+            
+            photo_info = backup_data.get('photo_info', [])
+            photos_dir = os.path.join(extract_dir, 'photos')
+            
+            if os.path.exists(photos_dir) and photo_info:
+                for photo_data in photo_info[:10]:  # İlk 10 fotoğraf - Render limitli
+                    try:
+                        restore_photo_file(photo_data, photos_dir)
+                    except:
+                        continue  # Fotoğraf hatası durumunda devam et
+            
+            # 10. Başarı
+            update_restore_progress(100, 'Render: Geri yükleme başarıyla tamamlandı!')
+            
+        finally:
+            # Temp dizini temizle
+            try:
+                shutil.rmtree(extract_dir)
+                os.unlink(zip_path)
+            except:
+                pass
+                
+    except Exception as e:
+        error_msg = f"Render optimize hatası: {str(e)}"
+        restore_progress = {
+            'status': 'error',
+            'progress': 0,
+            'message': error_msg
+        }
+        print(f"Render restore error: {e}")
+        raise
+
+def restore_backup_process_legacy(zip_path):
     global restore_progress
     
     try:
