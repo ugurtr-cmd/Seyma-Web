@@ -327,33 +327,39 @@
     /* PWA Install Button - Mobil Öncelikli */
     .pwa-install-mobile {
       display: flex !important; /* Her zaman göster */
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 1rem;
-      width: 100%;
+      gap: 10px !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      margin-top: 1rem !important;
+      width: 100% !important;
+      pointer-events: auto !important; /* ÖNEMLİ */
+      position: relative !important;
+      z-index: 5 !important;
     }
     
     .btn-pwa-install {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
       color: white !important;
-      border: none;
-      padding: 14px 20px; /* Mobil için büyütüldü */
-      border-radius: 25px;
-      font-size: 16px; /* Mobil için büyütüldü */
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-      cursor: pointer;
-      text-decoration: none;
-      min-height: 48px; /* Touch target minimum */
-      flex: 1;
-      min-width: 150px;
-      max-width: 200px;
+      border: none !important;
+      padding: 14px 20px !important;
+      border-radius: 25px !important;
+      font-size: 16px !important;
+      font-weight: 600 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 8px !important;
+      transition: all 0.3s ease !important;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+      cursor: pointer !important;
+      text-decoration: none !important;
+      min-height: 48px !important;
+      flex: 1 !important;
+      min-width: 150px !important;
+      max-width: 200px !important;
+      pointer-events: auto !important; /* ÖNEMLİ: Tıklanabilir olması için */
+      position: relative !important;
+      z-index: 10 !important;
     }
     
     .btn-pwa-install:hover,
@@ -618,8 +624,8 @@
     <div class="footer-content">
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
       
-      <!-- PWA Ana Ekrana Ekle Butonları - Mobil Optimize -->
-      <div id="pwa-install-container" class="pwa-install-mobile" style="display: flex !important; visibility: visible !important; opacity: 1 !important;">
+      <!-- PWA Ana Ekrana Ekle Butonları -->
+      <div id="pwa-install-container" class="pwa-install-mobile" style="display: flex !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important;">
         <button id="pwa-install-btn" class="btn-pwa-install" type="button">
           <i class="fas fa-download"></i>
           <span>Ana Uygulama Yükle</span>
@@ -638,6 +644,8 @@
   <script>
   document.addEventListener('DOMContentLoaded', function() {
     const navbar = document.querySelector('.navbar');
+
+    // Navbar scroll effect
     
     // Sayfa kaydırıldığında menüye gölge ekle
     window.addEventListener('scroll', function() {
@@ -681,177 +689,98 @@
       });
     }
 
-    // PWA ve Bildirim yönetimi - Mobil Optimize
-    let deferredPrompt;
+    // PWA YÖNETİMİ
+    console.log('PWA sistemi başlatılıyor...');
+    
+    // Butonları bul
     const pwaButton = document.getElementById('pwa-install-btn');
     const seymaAskButton = document.getElementById('seyma-ask-install-btn');
-    const pwaContainer = document.getElementById('pwa-install-container');
     
-    console.log('=== PWA Mobil Debug ===');
-    console.log('Ana PWA Butonu:', pwaButton);
-    console.log('Şeyma Sor Butonu:', seymaAskButton);
-    console.log('PWA Container:', pwaContainer);
-    console.log('Screen Width:', window.screen.width);
-    console.log('Inner Width:', window.innerWidth);
-    console.log('User Agent:', navigator.userAgent);
-    console.log('Touch Support:', 'ontouchstart' in window);
+    let deferredPrompt;
     
-    // PWA butonları ZORLA görünür yap - özellikle mobilde
-    if (pwaContainer) {
-      pwaContainer.style.display = 'flex';
-      pwaContainer.style.visibility = 'visible';
-      pwaContainer.style.opacity = '1';
-      console.log('PWA Container zorla gösterildi');
-      
-      // Mobil cihazlarda ek stiller
-      if (window.innerWidth <= 768 || 'ontouchstart' in window) {
-        pwaContainer.style.flexDirection = 'column';
-        pwaContainer.style.gap = '12px';
-        pwaContainer.style.padding = '0 10px';
-        console.log('Mobil PWA stilleri uygulandı');
-      }
-    }
-
-    // beforeinstallprompt event'i
+    // PWA kurulum prompt'unu yakala
     window.addEventListener('beforeinstallprompt', (e) => {
-      console.log('PWA kurulum prompt\'u hazır');
+      console.log('PWA kurulum prompt\'u yakalandı');
       e.preventDefault();
       deferredPrompt = e;
-      
-      if (pwaContainer) {
-        pwaContainer.style.display = 'flex';
-        console.log('PWA butonları prompt ile gösterildi');
-      }
     });
-
-    // PWA Debug Information
-    console.log('=== PWA Sistem Bilgileri ===');
-    console.log('Service Worker Support:', 'serviceWorker' in navigator);
-    console.log('Manifest Links:', document.querySelectorAll('link[rel="manifest"]').length);
-    console.log('Is Mobile Device:', /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-    console.log('Is Touch Device:', window.matchMedia('(pointer: coarse)').matches);
-    console.log('Screen Orientation:', screen.orientation ? screen.orientation.type : 'Unknown');
     
-    // Service Worker durumunu kontrol et
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        console.log('Aktif Service Worker sayısı:', registrations.length);
-        registrations.forEach((registration, index) => {
-          console.log(`SW ${index + 1} Scope:`, registration.scope);
-          console.log(`SW ${index + 1} State:`, registration.active ? registration.active.state : 'inactive');
-        });
-      });
-    }
-
-    // PWA kurulabilirlik durumunu kontrol et
+    // PWA kurulum tamamlandı
     window.addEventListener('appinstalled', (evt) => {
       console.log('PWA başarıyla kuruldu');
       alert('🎉 Uygulama ana ekranınıza başarıyla eklendi!');
     });
-
-    // Touch event'leri için optimizasyon
-    function addTouchSupport(button, callback) {
-      if (!button) return;
-      
-      let touchStartTime = 0;
-      
-      button.addEventListener('touchstart', function(e) {
-        touchStartTime = Date.now();
-        button.style.transform = 'scale(0.95)';
-      }, { passive: true });
-      
-      button.addEventListener('touchend', function(e) {
-        e.preventDefault();
-        const touchDuration = Date.now() - touchStartTime;
-        
-        button.style.transform = 'scale(1)';
-        
-        if (touchDuration < 300) { // Quick tap
-          console.log('Touch tap detected:', button.id);
-          callback(e);
-        }
-      }, { passive: false });
-      
-      // Fallback click event
-      button.addEventListener('click', function(e) {
-        console.log('Click event detected:', button.id);
-        e.preventDefault();
-        callback(e);
-      });
-    }
-
-    // Ana uygulama PWA install butonu - Touch optimized
+    
+    // Ana PWA Yükleme Butonu
     if (pwaButton) {
-      console.log('Ana PWA butonuna touch support ekleniyor');
-      addTouchSupport(pwaButton, function(e) {
-        console.log('Ana PWA butonu tetiklendi!');
-        installMainPWA();
+      pwaButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Ana PWA kurulumu başlatıldı');
+        
+        if (deferredPrompt) {
+          // PWA prompt var, kullan
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('PWA kurulumu kabul edildi');
+              alert('✅ Ana uygulama başarıyla kuruldu!');
+              
+              // Bildirim izni iste
+              if ('serviceWorker' in navigator && 'PushManager' in window) {
+                requestNotificationPermission();
+              }
+            } else {
+              console.log('PWA kurulumu reddedildi');
+              alert('ℹ️ Kurulum iptal edildi');
+            }
+            deferredPrompt = null;
+          });
+        } else {
+          // Manuel kurulum talimatları
+          console.log('Manuel kurulum talimatları gösteriliyor');
+          showManualInstallInstructions();
+        }
       });
-    } else {
-      console.error('❌ Ana PWA butonu bulunamadı!');
+      console.log('Ana PWA butonu hazır');
     }
     
-    // Şeyma'ya Sor PWA install butonu - Touch optimized
+    // Şeyma'ya Sor PWA Yükleme Butonu
     if (seymaAskButton) {
-      console.log('Şeyma Sor butonuna touch support ekleniyor');
-      addTouchSupport(seymaAskButton, function(e) {
-        console.log('Şeyma Sor butonu tetiklendi!');
-        installSeymaAskPWA();
+      seymaAskButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log('Şeyma\'ya Sor PWA sayfasına yönlendiriliyor');
+        
+        // Şeyma'ya Sor sayfasına git
+        const seymaUrl = window.location.origin + '/arama-motoru/';
+        window.location.href = seymaUrl;
       });
-    } else {
-      console.error('❌ Şeyma Sor butonu bulunamadı!');
+      console.log('Şeyma\'ya Sor PWA butonu hazır');
+    }
+    
+    // Manuel kurulum talimatları
+    function showManualInstallInstructions() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      let instructions = '';
+      
+      if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
+        instructions = '📱 Chrome\'da Ana Ekrana Eklemek:\n\n1. Sağ üst ⋮ menüsünü açın\n2. "Ana ekrana ekle" seçeneğini tıklayın\n3. "Ekle" butonuna basın\n\nVeya adres çubuğundaki yükleme simgesini tıklayın';
+      } else if (userAgent.includes('safari')) {
+        instructions = '📱 Safari\'de Ana Ekrana Eklemek:\n\n1. Alt kısımdaki paylaş butonunu (⬆️) tıklayın\n2. "Ana Ekrana Ekle" seçeneğini bulun\n3. "Ekle" butonuna basın';
+      } else if (userAgent.includes('firefox')) {
+        instructions = '📱 Firefox\'ta Ana Ekrana Eklemek:\n\n1. Sağ üst ☰ menüsünü açın\n2. "Ana sayfaya ekle" seçeneğini tıklayın\n3. "Ekle" butonuna basın';
+      } else if (userAgent.includes('edg')) {
+        instructions = '📱 Edge\'de Ana Ekrana Eklemek:\n\n1. Sağ üst ⋯ menüsünü açın\n2. "Uygulamalar" > "Bu siteyi uygulama olarak yükle"\n3. "Yükle" butonuna basın';
+      } else {
+        instructions = '💻 Ana Ekrana Eklemek:\n\n1. Tarayıcı menüsünü açın\n2. "Ana ekrana ekle" veya "Uygulama olarak yükle" seçeneğini bulun\n3. Kurulum adımlarını takip edin';
+      }
+      
+      alert('📲 PWA Kurulumu:\n\n' + instructions);
     }
 
-    function installMainPWA() {
-      console.log('installMainPWA fonksiyonu çalışıyor... (Mobil optimize)');
-      
-      // Mobil cihaz tespiti
-      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const alertMessage = isMobile ? 
-        '📱 Ana PWA butonu ÇALIŞIYOR! (Mobil)\ndeferredPrompt: ' + (deferredPrompt ? 'VAR' : 'YOK') :
-        '🖥️ Ana PWA butonu çalışıyor! (Masaüstü)\ndeferredPrompt: ' + (deferredPrompt ? 'VAR' : 'YOK');
-      
-      alert(alertMessage);
-      
-      if (deferredPrompt) {
-        console.log('PWA prompt kullanılıyor');
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('PWA kuruldu');
-            alert('✅ Ana uygulama başarıyla ana ekranınıza eklendi!');
-            if ('serviceWorker' in navigator && 'PushManager' in window) {
-              requestNotificationPermission();
-            }
-          } else {
-            console.log('PWA kurulumu reddedildi');
-            showInstallInstructions();
-          }
-          deferredPrompt = null;
-        });
-      } else {
-        console.log('deferredPrompt yok, manuel kurulum gösteriliyor');
-        showInstallInstructions();
-      }
+      console.error('Şeyma PWA butonu bulunamadı!');
     }
-        showInstallInstructions();
-      }
-    }
-        
-        // Tarayıcının PWA installability criteria'sını kontrol et
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.ready.then(() => {
-            console.log('Service Worker hazır, PWA kurulumuna devam');
-            
-            // Manifest URL'ini kontrol et
-            const manifestLinks = document.querySelectorAll('link[rel="manifest"]');
-            if (manifestLinks.length > 0) {
-              console.log('Manifest bulundu, kurulum criteria karşılanmış olmalı');
-              
-              // Kısa bir süre bekle ve tekrar dene
-              setTimeout(() => {
-                if (window.BeforeInstallPromptEvent) {
-                  console.log('BeforeInstallPromptEvent mevcut');
+
+    // Notification Permission Fonksiyonu
                 }
                 
                 // Chrome'da programmatik olarak kurulum tetiklemeye çalış
