@@ -36,6 +36,8 @@
   <!-- PNG ikon -->
   <link rel="icon" type="image/png" href="{% static 'blog/img/favicon2.png' %}">
 
+  <!-- PWA Mobil Optimizasyon CSS -->
+  <link rel="stylesheet" href="{% static 'pwa-mobile.css' %}">
 
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
@@ -326,7 +328,7 @@
     
     /* PWA Install Button - Mobil Öncelikli */
     .pwa-install-mobile {
-      display: none !important; /* Başlangıçta gizli, JavaScript ile gösterilecek */
+      display: flex !important; /* Mobilde her zaman göster */
       gap: 10px !important;
       flex-wrap: wrap !important;
       justify-content: center !important;
@@ -335,8 +337,8 @@
       pointer-events: auto !important;
       position: relative !important;
       z-index: 5 !important;
-      opacity: 0;
-      visibility: hidden;
+      opacity: 1 !important;
+      visibility: visible !important;
       transition: all 0.3s ease !important;
     }
     
@@ -344,6 +346,24 @@
       display: flex !important;
       opacity: 1 !important;
       visibility: visible !important;
+    }
+    
+    /* Masaüstünde daha az belirgin yap */
+    @media (min-width: 769px) and (pointer: fine) {
+      .pwa-install-mobile {
+        opacity: 0.6 !important;
+      }
+      .pwa-install-mobile:hover {
+        opacity: 1 !important;
+      }
+    }
+    
+    /* Sadece çok küçük ekranlarda gizle */
+    @media (max-width: 320px) {
+      .pwa-install-mobile {
+        flex-direction: column !important;
+        gap: 8px !important;
+      }
     }
     
     .btn-pwa-install {
@@ -650,7 +670,7 @@
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
       
       <!-- PWA Ana Ekrana Ekle Butonları -->
-      <div id="pwa-install-container" class="pwa-install-mobile" style="display: none; opacity: 0; visibility: hidden;">
+      <div id="pwa-install-container" class="pwa-install-mobile" style="display: flex !important; opacity: 1 !important; visibility: visible !important;">
         <button id="pwa-install-btn" class="btn-pwa-install" type="button" aria-label="Ana uygulamayı ana ekrana ekle">
           <i class="fas fa-download" aria-hidden="true"></i>
           <span>Ana Uygulama Yükle</span>
@@ -730,10 +750,65 @@
       
       // Event listener'ları ekle
       addPWAEventListeners();
+      
+      // Mobil cihazlarda otomatik göster
+      showPWAButtonsOnMobile();
+      
+      // Sayfa yüklendikten 2 saniye sonra tekrar kontrol et
+      setTimeout(showPWAButtonsOnMobile, 2000);
     });
+    
+    // Mobilde PWA butonlarını göster - Yeni fonksiyon
+    function showPWAButtonsOnMobile() {
+      const container = document.getElementById('pwa-install-container');
+      if (!container) return;
+      
+      // Geliştirilmiş mobil cihaz kontrolü
+      const isMobile = window.matchMedia && (
+        window.matchMedia('(max-width: 768px)').matches || 
+        window.matchMedia('(pointer: coarse)').matches ||
+        /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      );
+      
+      // PWA kurulu mu kontrol et
+      const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+      const isIOSStandalone = window.navigator && window.navigator.standalone;
+      
+      if (isMobile && !isStandalone && !isIOSStandalone) {
+        container.style.display = 'flex';
+        container.style.opacity = '1';
+        container.style.visibility = 'visible';
+        container.classList.add('show');
+        console.log('📱 PWA butonları mobilde gösterildi');
+        
+        // Butonlara ekstra stil ekle
+        const buttons = container.querySelectorAll('.btn-pwa-install');
+        buttons.forEach(btn => {
+          btn.style.pointerEvents = 'auto';
+          btn.style.zIndex = '1000';
+        });
+      } else if (isStandalone || isIOSStandalone) {
+        container.style.display = 'none';
+        console.log('✅ PWA zaten kurulu, butonlar gizlendi');
+      } else if (!isMobile) {
+        // Masaüstünde daha şeffaf göster
+        container.style.display = 'flex';
+        container.style.opacity = '0.6';
+        console.log('💻 PWA butonları masaüstünde hazır');
+      }
+    }
     
     // PWA kurulum durumunu kontrol et
     function checkPWAInstallation() {
+      // Mobil cihaz tespiti
+      const isMobile = detectMobileDevice();
+      
+      // DOM'a mobil class ekle
+      if (isMobile) {
+        document.body.classList.add('mobile-device');
+        document.body.classList.add('touch-device');
+      }
+      
       // PWA'nın standalone modda çalışıp çalışmadığını kontrol et
       if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
         console.log('📱 PWA standalone modda çalışıyor');
@@ -747,6 +822,29 @@
         console.log('🌐 PWA normal tarayıcı modunda');
         showPWAButtons();
       }
+    }
+    
+    // Geliştirilmiş mobil cihaz tespiti
+    function detectMobileDevice() {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      
+      // Çoklu tespit yöntemi
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const isMobileScreen = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+      const isTouchDevice = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      const isMobile = isMobileUA || isMobileScreen || isTouchDevice || hasTouch;
+      
+      console.log('📱 Mobil tespit:', {
+        userAgent: isMobileUA,
+        screen: isMobileScreen, 
+        touch: isTouchDevice,
+        hasTouch: hasTouch,
+        result: isMobile
+      });
+      
+      return isMobile;
     }
     
     // PWA butonlarını başlat
@@ -796,28 +894,94 @@
       });
     }
     
-    // Ana PWA kurulumu
+    // Ana PWA kurulumu - Otomatik
     function handleMainPWAInstall(e) {
       e.preventDefault();
       console.log('🚀 Ana PWA kurulumu başlatıldı');
       
       if (deferredPrompt) {
-        // Otomatik prompt mevcut
+        // Otomatik prompt
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
             console.log('✅ PWA kurulumu kabul edildi');
+            alert('🎉 Ana uygulama başarıyla ana ekranınıza eklendi!');
           } else {
             console.log('❌ PWA kurulumu reddedildi');
-            alert('ℹ️ Kurulum iptal edildi. Manuel kurulum için tarayıcı menüsünü kontrol edin.');
+            // Reddetse bile manuel talimatları göster
+            setTimeout(() => {
+              showManualInstallInstructions();
+            }, 500);
           }
           deferredPrompt = null;
         });
       } else {
-        // Manuel kurulum talimatları
-        console.log('📖 Manuel kurulum talimatları gösteriliyor');
+        // Derhal kurulum tetiklemeye çalış
+        attemptDirectInstall();
+      }
+    }
+    
+    // Doğrudan kurulum denemesi
+    function attemptDirectInstall() {
+      console.log('📦 Doğrudan kurulum deneniyor...');
+      
+      // Chrome'da programmatik kurulum
+      if (window.chrome && !window.navigator.standalone) {
+        // Chrome API'lerini kullanmaya çalış
+        if ('getInstalledRelatedApps' in navigator) {
+          navigator.getInstalledRelatedApps().then(apps => {
+            if (apps.length === 0) {
+              // Uygulama kurulu değil, kurulum tetikle
+              triggerChromeInstall();
+            } else {
+              alert('✅ Uygulama zaten kurulu görünüyor!');
+            }
+          }).catch(() => {
+            triggerChromeInstall();
+          });
+        } else {
+          triggerChromeInstall();
+        }
+      } else if (window.navigator.standalone !== undefined) {
+        // iOS Safari
+        if (!window.navigator.standalone) {
+          showIOSInstallInstructions();
+        } else {
+          alert('✅ Uygulama zaten kurulu!');
+        }
+      } else {
+        // Diğer tarayıcılar
         showManualInstallInstructions();
       }
+    }
+    
+    // Chrome kurulum tetikleme
+    function triggerChromeInstall() {
+      console.log('� Chrome kurulum tetikleniyor...');
+      
+      // Kullanıcıyı bilgilendir
+      const result = confirm('📱 Uygulamayı ana ekrana eklemek için:\n\n' +
+                           '1. Adres çubuğundaki "Yükle" simgesini arayın\n' +
+                           '2. Veya menüden "Ana ekrana ekle" seçin\n\n' +
+                           'Şimdi otomatik deneme yapalım mı?');
+      
+      if (result) {
+        // Sayfayı yenile (bazen prompt'u tetikler)
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showManualInstallInstructions();
+      }
+    }
+    
+    // iOS kurulum talimatları
+    function showIOSInstallInstructions() {
+      alert('📱 iOS\'ta Ana Ekrana Eklemek:\n\n' +
+            '1. Alttaki paylaş butonunu (⬆️) tıklayın\n' +
+            '2. "Ana Ekrana Ekle" seçeneğini bulun\n' +
+            '3. "Ekle" butonuna basın\n\n' +
+            '🎯 Bu şekilde uygulama tam ekran açılacak!');
     }
     
     // Şeyma'ya Sor PWA kurulumu

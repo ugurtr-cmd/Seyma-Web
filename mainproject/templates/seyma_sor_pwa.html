@@ -85,13 +85,24 @@
             color: white;
             padding: 10px 15px;
             text-align: center;
-            display: none;
+            display: block; /* Mobilde varsayılan olarak göster */
             z-index: 1000;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Masaüstünde gizle */
+        @media (min-width: 769px) and (pointer: fine) {
+            .pwa-install-banner {
+                display: none;
+            }
         }
         
         .pwa-install-banner.show {
             display: block;
+            opacity: 1;
+            visibility: visible;
         }
         
         .pwa-install-content {
@@ -792,7 +803,7 @@
         const installBtn = document.getElementById('pwa-install-btn');
         const dismissBtn = document.getElementById('pwa-dismiss-btn');
         
-        // PWA kurulabilirlik kontrolü
+        // PWA kurulabilirlik kontrolü - Otomatik kurulum
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -800,6 +811,26 @@
             // Banner'ı göster (sadece mobilde)
             if (isMobileDevice()) {
                 installBanner.classList.add('show');
+                
+                // 3 saniye sonra otomatik kurulum teklifi
+                setTimeout(() => {
+                    if (confirm('🤖 Şeyma\'ya Sor uygulamasını ana ekranınıza eklemek ister misiniz?\n\nBu şekilde daha hızlı erişebilirsiniz!')) {
+                        if (deferredPrompt) {
+                            deferredPrompt.prompt();
+                            deferredPrompt.userChoice.then((choiceResult) => {
+                                if (choiceResult.outcome === 'accepted') {
+                                    console.log('Otomatik PWA kurulumu kabul edildi');
+                                    alert('🎉 Şeyma\'ya Sor ana ekranınıza eklendi!');
+                                } else {
+                                    console.log('Otomatik PWA kurulumu reddedildi');
+                                    showManualInstallInstructions();
+                                }
+                                deferredPrompt = null;
+                                installBanner.classList.remove('show');
+                            });
+                        }
+                    }
+                }, 3000);
             }
         });
         
