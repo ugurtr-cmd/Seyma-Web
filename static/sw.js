@@ -1,11 +1,12 @@
-const CACHE_NAME = 'seyma-v2';
+const CACHE_NAME = 'seyma-v3';
 const urlsToCache = [
   '/',
-  '/static/css/style.css',
+  '/static/manifest.json',
   '/admin-paneli/',
+  '/arama-motoru/',
   '/offline.html',
-  '/static/pwa/icon-192x192.png',
-  '/static/pwa/icon-512x512.png'
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
 // Service Worker yükleme
