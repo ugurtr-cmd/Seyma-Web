@@ -669,15 +669,11 @@
     <div class="footer-content">
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
       
-      <!-- PWA Ana Ekrana Ekle Butonları -->
+      <!-- PWA Ana Ekrana Ekle Butonu - Sadece Ana Uygulama -->
       <div id="pwa-install-container" class="pwa-install-mobile" style="display: flex !important; opacity: 1 !important; visibility: visible !important;">
         <button id="pwa-install-btn" class="btn-pwa-install" type="button" aria-label="Ana uygulamayı ana ekrana ekle">
           <i class="fas fa-download" aria-hidden="true"></i>
-          <span>Ana Uygulama Yükle</span>
-        </button>
-        <button id="seyma-ask-install-btn" class="btn-pwa-install btn-pwa-ask" type="button" aria-label="Şeyma'ya Sor uygulamasını yükle">
-          <i class="fas fa-robot" aria-hidden="true"></i>
-          <span>Şeyma'ya Sor Yükle</span>
+          <span>Ana Uygulamayı Yükle</span>
         </button>
       </div>
     </div>
@@ -850,20 +846,12 @@
     // PWA butonlarını başlat
     function initializePWAButtons() {
       const pwaButton = document.getElementById('pwa-install-btn');
-      const seymaAskButton = document.getElementById('seyma-ask-install-btn');
       
       if (pwaButton) {
         pwaButton.addEventListener('click', handleMainPWAInstall);
         console.log('✅ Ana PWA butonu hazır');
       } else {
         console.warn('⚠️ Ana PWA butonu bulunamadı');
-      }
-      
-      if (seymaAskButton) {
-        seymaAskButton.addEventListener('click', handleSeymaAskInstall);
-        console.log('✅ Şeyma\'ya Sor PWA butonu hazır');
-      } else {
-        console.warn('⚠️ Şeyma\'ya Sor PWA butonu bulunamadı');
       }
     }
     
@@ -894,68 +882,42 @@
       });
     }
     
-    // Ana PWA kurulumu - Otomatik
+    // Ana PWA kurulumu - Basit ve Otomatik
     function handleMainPWAInstall(e) {
       e.preventDefault();
       console.log('🚀 Ana PWA kurulumu başlatıldı');
       
       if (deferredPrompt) {
-        // Otomatik prompt
+        // Otomatik prompt - direkt başlat
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
             console.log('✅ PWA kurulumu kabul edildi');
             alert('🎉 Ana uygulama başarıyla ana ekranınıza eklendi!');
+            hidePWAButtons();
           } else {
             console.log('❌ PWA kurulumu reddedildi');
-            // Reddetse bile manuel talimatları göster
-            setTimeout(() => {
-              showManualInstallInstructions();
-            }, 500);
+            alert('ℹ️ Kurulum iptal edildi. Tarayıcı menüsünden "Ana ekrana ekle" seçeneğini kullanabilirsiniz.');
           }
           deferredPrompt = null;
         });
       } else {
-        // Derhal kurulum tetiklemeye çalış
-        attemptDirectInstall();
-      }
-    }
-    
-    // Doğrudan kurulum denemesi
-    function attemptDirectInstall() {
-      console.log('📦 Doğrudan kurulum deneniyor...');
-      
-      // Chrome'da programmatik kurulum
-      if (window.chrome && !window.navigator.standalone) {
-        // Chrome API'lerini kullanmaya çalış
-        if ('getInstalledRelatedApps' in navigator) {
-          navigator.getInstalledRelatedApps().then(apps => {
-            if (apps.length === 0) {
-              // Uygulama kurulu değil, kurulum tetikle
-              triggerChromeInstall();
-            } else {
-              alert('✅ Uygulama zaten kurulu görünüyor!');
-            }
-          }).catch(() => {
-            triggerChromeInstall();
-          });
-        } else {
-          triggerChromeInstall();
-        }
-      } else if (window.navigator.standalone !== undefined) {
-        // iOS Safari
-        if (!window.navigator.standalone) {
-          showIOSInstallInstructions();
-        } else {
-          alert('✅ Uygulama zaten kurulu!');
-        }
-      } else {
-        // Diğer tarayıcılar
+        // Manuel kurulum talimatları
+        console.log('📖 Manuel kurulum talimatları gösteriliyor');
         showManualInstallInstructions();
       }
     }
     
-    // Chrome kurulum tetikleme
+    
+    // Şeyma'ya Sor PWA kurulumu - Kaldırıldı, sadece normal link olarak çalışır
+    function handleSeymaAskInstall(e) {
+      e.preventDefault();
+      console.log('🤖 Şeyma\'ya Sor sayfasına yönlendiriliyor');
+      
+      // Şeyma'ya Sor sayfasına git
+      const seymaUrl = window.location.origin + '/arama-motoru/';
+      window.location.href = seymaUrl;
+    }    // Chrome kurulum tetikleme
     function triggerChromeInstall() {
       console.log('� Chrome kurulum tetikleniyor...');
       

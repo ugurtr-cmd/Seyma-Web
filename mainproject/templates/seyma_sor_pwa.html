@@ -6,16 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Şeyma'ya Sor - AI Asistan</title>
     
-    <!-- PWA Meta Etiketleri -->
+    <!-- Normal web sayfası meta etiketleri -->
     <meta name="description" content="Şeyma AI Asistan ile Kur'an ve İslami sorularınızı sorun">
     <meta name="theme-color" content="#4e73df">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Şeyma'ya Sor">
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/seyma-sor-manifest.json">
+    <!-- PWA Manifest kaldırıldı -->
     
     <!-- Favicon ve İkonlar -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23667eea'/%3E%3Ctext x='50' y='70' text-anchor='middle' fill='white' font-size='40' font-family='Arial, sans-serif'%3E🤖%3C/text%3E%3C/svg%3E">
@@ -75,34 +70,23 @@
             gap: 2rem;
         }
         
-        /* PWA İnstall Banner */
+        /* PWA İnstall Banner - Sadece bilgi amaçlı */
         .pwa-install-banner {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: linear-gradient(45deg, #28a745, #20c997);
             color: white;
             padding: 10px 15px;
             text-align: center;
-            display: block; /* Mobilde varsayılan olarak göster */
+            display: none;
             z-index: 1000;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        /* Masaüstünde gizle */
-        @media (min-width: 769px) and (pointer: fine) {
-            .pwa-install-banner {
-                display: none;
-            }
         }
         
         .pwa-install-banner.show {
             display: block;
-            opacity: 1;
-            visibility: visible;
         }
         
         .pwa-install-content {
@@ -669,16 +653,15 @@
     </style>
 </head>
 <body>
-    <!-- PWA Install Banner -->
-    <div class="pwa-install-banner" id="pwa-install-banner">
+    <!-- PWA Install Banner - Basit Banner -->
+    <div class="pwa-install-banner" id="pwa-install-banner" style="display: none;">
         <div class="pwa-install-content">
             <div class="pwa-install-text">
-                <i class="fas fa-download"></i>
-                "Şeyma'ya Sor"u telefonunuza yükleyin!
+                <i class="fas fa-info-circle"></i>
+                Bu sayfa normal web sayfası olarak çalışır
             </div>
             <div class="pwa-install-buttons">
-                <button class="pwa-install-btn" id="pwa-install-btn">Yükle</button>
-                <button class="pwa-dismiss-btn" id="pwa-dismiss-btn">Kapat</button>
+                <button class="pwa-dismiss-btn" id="pwa-dismiss-btn">Tamam</button>
             </div>
         </div>
     </div>
@@ -786,84 +769,19 @@
         const loadingSpinner = document.getElementById('loading-spinner');
         const submitBtn = document.getElementById('submit-btn');
         
-        // Service Worker'ı kaydet
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw-seyma-sor.js')
-                .then(registration => {
-                    console.log('Şeyma\'ya Sor SW registered: ', registration);
-                })
-                .catch(registrationError => {
-                    console.log('Şeyma\'ya Sor SW registration failed: ', registrationError);
-                });
-        }
+        // Service Worker kaldırıldı - Normal web sayfası olarak çalışır
         
-        // PWA Install Logic
-        let deferredPrompt;
-        const installBanner = document.getElementById('pwa-install-banner');
-        const installBtn = document.getElementById('pwa-install-btn');
-        const dismissBtn = document.getElementById('pwa-dismiss-btn');
-        
-        // PWA kurulabilirlik kontrolü - Otomatik kurulum
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Banner'ı göster (sadece mobilde)
-            if (isMobileDevice()) {
-                installBanner.classList.add('show');
-                
-                // 3 saniye sonra otomatik kurulum teklifi
-                setTimeout(() => {
-                    if (confirm('🤖 Şeyma\'ya Sor uygulamasını ana ekranınıza eklemek ister misiniz?\n\nBu şekilde daha hızlı erişebilirsiniz!')) {
-                        if (deferredPrompt) {
-                            deferredPrompt.prompt();
-                            deferredPrompt.userChoice.then((choiceResult) => {
-                                if (choiceResult.outcome === 'accepted') {
-                                    console.log('Otomatik PWA kurulumu kabul edildi');
-                                    alert('🎉 Şeyma\'ya Sor ana ekranınıza eklendi!');
-                                } else {
-                                    console.log('Otomatik PWA kurulumu reddedildi');
-                                    showManualInstallInstructions();
-                                }
-                                deferredPrompt = null;
-                                installBanner.classList.remove('show');
-                            });
-                        }
-                    }
-                }, 3000);
-            }
-        });
-        
-        // Install butonu tıklandığında
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                
-                if (outcome === 'accepted') {
-                    console.log('Şeyma\'ya Sor PWA installed');
-                    alert('🎉 Şeyma\'ya Sor ana ekranınıza eklendi!');
-                } else {
-                    alert('ℹ️ Kurulum iptal edildi. Tarayıcı menüsünden manuel olarak ekleyebilirsiniz.');
-                }
-                
-                deferredPrompt = null;
-                installBanner.classList.remove('show');
-            } else {
-                // Manuel kurulum talimatları
-                showManualInstallInstructions();
-            }
-        });
+        // Basitleştirilmiş JavaScript - PWA özelliği kaldırıldı
         
         // Dismiss butonu
-        dismissBtn.addEventListener('click', () => {
-            installBanner.classList.remove('show');
-            localStorage.setItem('pwa-dismissed', 'true');
-        });
-        
-        // Daha önce dismiss edilmişse banner'ı gösterme
-        if (localStorage.getItem('pwa-dismissed') === 'true') {
-            installBanner.classList.remove('show');
+        const dismissBtn = document.getElementById('pwa-dismiss-btn');
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+                const banner = document.getElementById('pwa-install-banner');
+                if (banner) {
+                    banner.style.display = 'none';
+                }
+            });
         }
         
         form.addEventListener('submit', function(e) {

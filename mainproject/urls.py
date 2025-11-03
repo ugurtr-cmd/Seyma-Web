@@ -47,15 +47,10 @@ urlpatterns = [
     path('admin-paneli/parola_guncelle', views.change_password,name="parola_guncelle"),
     path('cikis', views.user_logout, name="cikis"),
     
-    # PWA Routes
+    # PWA Routes - Sadece ana uygulama
     path('offline/', views.offline_page, name='offline'),
     path('pwa-test/', views.pwa_test, name='pwa_test'),
     path('notification-test/', views.notification_test, name='notification_test'),
-    
-    # Şeyma'ya Sor PWA Routes
-    path('seyma-sor/', views.arama_motoru, name='seyma_sor_pwa'),
-    path('seyma-sor-manifest.json', views.seyma_sor_manifest, name='seyma_sor_manifest'),
-    path('sw-seyma-sor.js', views.seyma_sor_service_worker, name='seyma_sor_service_worker'),
     
     # Günlük Mesaj Routes
     path('admin-paneli/gunluk-mesaj-guncelle/', views.gunluk_mesaj_guncelle, name='gunluk_mesaj_guncelle'),

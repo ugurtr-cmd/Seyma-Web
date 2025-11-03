@@ -1,6 +1,6 @@
-/* PWA Mobil Optimizasyonları */
+/* PWA Mobil Optimizasyonları - Tek Buton */
 
-/* Mobilde PWA butonlarını zorla göster */
+/* Mobilde PWA butonunu zorla göster */
 @media screen and (max-width: 768px) {
     .pwa-install-mobile {
         display: flex !important;
@@ -11,6 +11,7 @@
         border-radius: 15px !important;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
+        justify-content: center !important;
     }
     
     .btn-pwa-install {
@@ -20,10 +21,9 @@
         text-transform: uppercase !important;
         letter-spacing: 1px !important;
         animation: pulse-glow 2s infinite !important;
-    }
-    
-    .btn-pwa-ask {
-        animation: pulse-glow-pink 2s infinite !important;
+        width: 100% !important;
+        max-width: 300px !important;
+        margin: 0 auto !important;
     }
 }
 
@@ -33,12 +33,15 @@
         display: flex !important;
         opacity: 1 !important;
         visibility: visible !important;
+        justify-content: center !important;
     }
     
     .btn-pwa-install {
         min-height: 56px !important;
         font-size: 18px !important;
         padding: 16px 24px !important;
+        width: 100% !important;
+        max-width: 300px !important;
     }
 }
 
