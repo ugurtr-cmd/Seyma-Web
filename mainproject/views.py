@@ -1871,7 +1871,7 @@ from mainproject.models import Ogrenci, EzberKaydi, SinavSonucu
 
 @login_required(login_url='login')
 def admin_dashboard(request):
-    # İstatistik verileri
+    # İstatistik verileri - Her zaman güncel veriyi al
     toplam_yazi = yazi.objects.count()
     toplam_ogrenci = Ogrenci.objects.count()
     
@@ -1885,6 +1885,10 @@ def admin_dashboard(request):
     devam_eden_ezber = EzberKaydi.objects.filter(durum='DEVAM').count()
     toplam_ezber = tamamlanan_ezber + devam_eden_ezber
     ezber_tamamlama_orani = round((tamamlanan_ezber / toplam_ezber * 100), 1) if toplam_ezber > 0 else 0
+    
+    # Elif Ba istatistikleri
+    tamamlanan_elifba = ElifBaEzberDurumu.objects.filter(durum='TAMAMLANDI').count()
+    devam_eden_elifba = ElifBaEzberDurumu.objects.filter(durum='DEVAM').count()
     
     # Seviye dağılımı
     seviye_dagilimi = {
@@ -1932,10 +1936,21 @@ def admin_dashboard(request):
     # Son 5 yazı
     son_yazilar = yazi.objects.all().order_by('-id')[:5]
     
-    # Günlük mesaj sistemi
+    # Günlük mesaj sistemi - Veri geri yükleme sonrası güncelle
     gunluk_mesaj = GunlukMesaj.bugunun_mesaji()
+    
+    # Mesaj varsa ama verilerle uyumsuzsa (örn: 0 öğrenci diyor ama öğrenci var), yeniden oluştur
+    mesaj_guncel_mi = True
+    if gunluk_mesaj and toplam_ogrenci > 0:
+        # Mesajda "0 öğrenci" gibi ifadeler varsa ve aslında öğrenci varsa, mesaj eski demektir
+        if "0 öğrenci" in gunluk_mesaj.mesaj.lower() or "hiç öğrenci" in gunluk_mesaj.mesaj.lower():
+            mesaj_guncel_mi = False
+            print(f"⚠️ Günlük mesaj eski verilerle oluşturulmuş, yenileniyor...")
+            gunluk_mesaj.delete()  # Eski mesajı sil
+            gunluk_mesaj = None
+    
     if not gunluk_mesaj:
-        # Bugün için mesaj yok, yeni oluştur
+        # Bugün için mesaj yok veya eski mesaj silindi, yeni oluştur
         gunluk_mesaj = gunluk_mesaj_olustur()
     
     # Son 7 günün mesajları
@@ -1949,6 +1964,9 @@ def admin_dashboard(request):
         'tamamlanan_ezber': tamamlanan_ezber,
         'devam_eden_ezber': devam_eden_ezber,
         'ezber_tamamlama_orani': ezber_tamamlama_orani,
+        # Elif Ba istatistikleri eklendi
+        'tamamlanan_elifba': tamamlanan_elifba,
+        'devam_eden_elifba': devam_eden_elifba,
         'seviye_dagilimi': seviye_dagilimi,
         'en_basarili_5_ogrenci': en_basarili_5_ogrenci,
         'son_ogrenciler': son_ogrenciler,
@@ -3291,6 +3309,23 @@ def service_worker(request):
         # Fallback minimal service worker
         fallback_sw = """
 const CACHE_NAME = 'seyma-fallback';
+self.addEventListener('install', (e) => e.waitUntil(self.skipWaiting()));
+self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', () => {});
+"""
+        return HttpResponse(fallback_sw, content_type='application/javascript')
+
+def service_worker_seymasor(request):
+    """Şeyma'ya Sor Service Worker dosyasını serve et"""
+    sw_path = os.path.join(settings.BASE_DIR, 'static', 'sw-seymasor.js')
+    try:
+        with open(sw_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HttpResponse(content, content_type='application/javascript')
+    except FileNotFoundError:
+        # Fallback minimal service worker
+        fallback_sw = """
+const CACHE_NAME = 'seymasor-fallback';
 self.addEventListener('install', (e) => e.waitUntil(self.skipWaiting()));
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', () => {});

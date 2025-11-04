@@ -382,6 +382,63 @@
       margin-right: auto;
     }
     
+    /* PWA Buttons Container */
+    .pwa-buttons-container {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      margin-top: 2rem;
+      width: 100%;
+    }
+    
+    /* Şeyma'ya Sor Özel Buton Stili */
+    .btn-install-seymasor {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+      box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4) !important;
+    }
+    
+    .btn-install-seymasor:hover {
+      box-shadow: 0 15px 40px rgba(245, 87, 108, 0.5) !important;
+      transform: translateY(-3px) !important;
+    }
+    
+    .btn-install-seymasor i {
+      animation: pulse 2s ease-in-out infinite !important;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+    }
+    
+    /* Mobilde yan yana göster */
+    @media (min-width: 600px) and (max-width: 768px) {
+      .pwa-buttons-container {
+        flex-direction: row;
+        justify-content: center;
+        gap: 1rem;
+      }
+      
+      .pwa-install-container {
+        flex: 1;
+        max-width: 300px;
+      }
+      
+      .btn-install-pwa {
+        width: 100%;
+        font-size: 0.95rem;
+        padding: 14px 20px;
+      }
+      
+      .install-info {
+        font-size: 0.8rem;
+      }
+    }
+    
     /* iOS Install Instructions Modal Styles */
     .ios-install-modal {
       display: none;
@@ -682,15 +739,29 @@
     <div class="footer-content">
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
       
-      <!-- PWA Install Button -->
-      <div class="pwa-install-container" id="pwaInstallContainer">
-        <button class="btn-install-pwa" id="btnInstallPwa">
-          <i class="fas fa-download"></i>
-          <span>Uygulamayı Yükle</span>
-        </button>
-        <p class="install-info">
-          📱 Ana ekranınıza ekleyerek daha hızlı erişim sağlayın
-        </p>
+      <!-- PWA Install Buttons Container -->
+      <div class="pwa-buttons-container">
+        <!-- Ana Site PWA Butonu -->
+        <div class="pwa-install-container" id="pwaInstallContainer">
+          <button class="btn-install-pwa" id="btnInstallPwa">
+            <i class="fas fa-download"></i>
+            <span>Uygulamayı Yükle</span>
+          </button>
+          <p class="install-info">
+            📱 Ana ekranınıza ekleyerek daha hızlı erişim sağlayın
+          </p>
+        </div>
+
+        <!-- Şeyma'ya Sor PWA Butonu -->
+        <div class="pwa-install-container" id="seymaSorInstallContainer">
+          <a href="/arama-motoru/?pwa_prompt=1" class="btn-install-pwa btn-install-seymasor" id="btnInstallSeymaSor">
+            <i class="fas fa-brain"></i>
+            <span>Şeyma'ya Sor'u Yükle</span>
+          </a>
+          <p class="install-info">
+            🤖 AI asistanı ana ekranınıza ekleyin
+          </p>
+        </div>
       </div>
     </div>
   </footer>

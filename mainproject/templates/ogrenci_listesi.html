@@ -590,8 +590,15 @@
     .table-progress-info {
         display: flex;
         justify-content: space-between;
+        gap: 0.5rem;
         font-size: 0.8rem;
         color: #2b2727ff;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
+    
+    .table-progress-info span {
+        flex-shrink: 0;
     }
     
     .badge {
@@ -751,6 +758,27 @@
         
         .table tbody td:last-child {
             border-bottom: none;
+        }
+        
+        /* Mobilde progress bilgilerini düzgün göster */
+        .table tbody td[data-label="Ezber Durumu"],
+        .table tbody td[data-label="Elif Ba Durumu"] {
+            display: block;
+        }
+        
+        .table tbody td[data-label="Ezber Durumu"]::before,
+        .table tbody td[data-label="Elif Ba Durumu"]::before {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .table-progress-container {
+            margin-bottom: 0.5rem;
+        }
+        
+        .table-progress-info {
+            justify-content: flex-start;
+            gap: 1rem;
         }
     }
     
