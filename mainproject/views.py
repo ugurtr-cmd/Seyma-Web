@@ -62,6 +62,7 @@ restore_progress = {
 
 @login_required(login_url='login')
 def restore_data(request):
+    """Basit ve güvenilir yedekleme geri yükleme sistemi"""
     global restore_progress
     
     if request.method == 'GET':
@@ -88,68 +89,223 @@ def restore_data(request):
         return render(request, 'restore_data.html', {
             'backups': backups,
             'restore_progress': restore_progress
-        })  
-      
-    # POST isteği
+        })
+    
+    # POST isteği - Dosya yükleme
     if 'backup_file' not in request.FILES:
         messages.error(request, 'Lütfen bir yedek dosyası seçin.')
         return redirect('restore_data')
     
     backup_file = request.FILES['backup_file']
     
-    # RENDER OPTIMIZE - Hemen ilerleme durumunu güncelle
+    # İlerleme durumunu başlat
     restore_progress = {
-        'status': 'started', 
-        'progress': 5,
-        'message': 'Dosya alınıyor... (Render için optimize edildi)'
+        'status': 'started',
+        'progress': 0,
+        'message': 'Geri yükleme işlemi başlatılıyor...'
     }
     
     try:
-        # Dosyayı HIZLICA kaydet - Render için optimize
+        # Geçici dizin oluştur
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_restore')
         os.makedirs(temp_dir, exist_ok=True)
         
-        zip_path = os.path.join(temp_dir, f'backup_{int(time.time())}.zip')
-        
-        # RENDER OPTIMIZE - Daha küçük chunk ve hızlı işlem
+        # ZIP dosyasını kaydet
+        zip_path = os.path.join(temp_dir, f'restore_{int(time.time())}.zip')
         with open(zip_path, 'wb+') as destination:
-            for chunk in backup_file.chunks(4096):  # 4KB chunk - Render için küçük
+            for chunk in backup_file.chunks():
                 destination.write(chunk)
         
-        # HEMEN ilerlemeyi güncelle
-        restore_progress = {
-            'status': 'processing',
-            'progress': 15, 
-            'message': 'Dosya kaydedildi, Render sunucusunda işlem başlatılıyor...'
-        }
+        update_restore_progress(10, 'ZIP dosyası kaydedildi')
         
-        # RENDER OPTIMIZE - Thread kullanmak yerine doğrudan işlem
-        try:
-            restore_backup_process_render_optimized(zip_path)
+        # ZIP dosyasını aç
+        if not zipfile.is_zipfile(zip_path):
+            raise ValueError('Geçerli bir ZIP dosyası değil!')
+        
+        extract_dir = os.path.join(temp_dir, 'extracted')
+        os.makedirs(extract_dir, exist_ok=True)
+        
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_dir)
+        
+        update_restore_progress(20, 'ZIP dosyası açıldı')
+        
+        # JSON dosyasını oku
+        json_path = os.path.join(extract_dir, 'backup.json')
+        if not os.path.exists(json_path):
+            raise ValueError('Yedek dosyasında backup.json bulunamadı!')
+        
+        with open(json_path, 'r', encoding='utf-8') as f:
+            backup_data = json.load(f)
+        
+        update_restore_progress(30, 'Yedek verileri okundu')
+        
+        # Acil yedek oluştur
+        create_emergency_backup()
+        update_restore_progress(40, 'Acil yedek oluşturuldu')
+        
+        # Veritabanını temizle ve geri yükle
+        from django.db import transaction, connection
+        
+        with transaction.atomic():
+            # Foreign key kontrollerini geçici olarak kapat
+            with connection.cursor() as cursor:
+                cursor.execute('PRAGMA foreign_keys=OFF;')
             
-            if restore_progress['status'] == 'error':
-                messages.error(request, f"Geri yükleme hatası: {restore_progress['message']}")
-            else:
-                messages.success(request, 'Geri yükleme başarıyla tamamlandı!')
-                
-        except Exception as e:
-            error_msg = f"Render sunucusunda geri yükleme hatası: {str(e)}"
-            restore_progress = {
-                'status': 'error',
-                'progress': 0,
-                'message': error_msg
-            }
-            messages.error(request, error_msg)
+            update_restore_progress(50, 'Eski veriler siliniyor...')
+            
+            # Verileri doğru sırayla sil
+            try:
+                ElifBaEzberDurumu.objects.all().delete()
+                DersNotu.objects.all().delete()
+                SinavSonucu.objects.all().delete()
+                EzberKaydi.objects.all().delete()
+                Ogrenci.objects.all().delete()
+                Alinti.objects.all().delete()
+                yazi.objects.all().delete()
+                Ders.objects.all().delete()
+                ElifBaEzberi.objects.all().delete()
+                EzberSuresi.objects.all().delete()
+                category.objects.all().delete()
+            except Exception as e:
+                print(f"Silme hatası: {e}")
+            
+            update_restore_progress(60, 'Eski veriler silindi')
+            
+            # Verileri geri yükle - sıralı olarak
+            progress_per_model = 30 / 11  # 11 model için 30% alan
+            current_progress = 60
+            
+            # 1. Categories
+            if 'categories' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['categories']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Kategoriler yüklendi')
+            
+            # 2. Ezber Sureleri
+            if 'ezber_sureleri' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['ezber_sureleri']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Ezber sureleri yüklendi')
+            
+            # 3. Elif Ba Ezberleri
+            if 'elifba_ezberleri' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['elifba_ezberleri']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Elif Ba ezberleri yüklendi')
+            
+            # 4. Dersler
+            if 'dersler' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['dersler']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Dersler yüklendi')
+            
+            # 5. Yazılar
+            if 'yazilar' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['yazilar']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Yazılar yüklendi')
+            
+            # 6. Öğrenciler
+            if 'ogrenciler' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['ogrenciler']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Öğrenciler yüklendi')
+            
+            # 7. Alıntılar
+            if 'alintilar' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['alintilar']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Alıntılar yüklendi')
+            
+            # 8. Ezber Kayıtları
+            if 'ezber_kayitlari' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['ezber_kayitlari']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Ezber kayıtları yüklendi')
+            
+            # 9. Sınav Sonuçları
+            if 'sinav_sonuclari' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['sinav_sonuclari']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Sınav sonuçları yüklendi')
+            
+            # 10. Ders Notları
+            if 'ders_notlari' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['ders_notlari']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Ders notları yüklendi')
+            
+            # 11. Elif Ba Ezber Durumları
+            if 'elifba_ezber_durumlari' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['elifba_ezber_durumlari']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Elif Ba durumları yüklendi')
+            
+            # Foreign key kontrollerini tekrar aç
+            with connection.cursor() as cursor:
+                cursor.execute('PRAGMA foreign_keys=ON;')
         
+        update_restore_progress(90, 'Fotoğraflar yükleniyor...')
+        
+        # Fotoğrafları geri yükle
+        photos_dir = os.path.join(extract_dir, 'photos')
+        if os.path.exists(photos_dir) and 'photo_info' in backup_data:
+            for photo_data in backup_data['photo_info']:
+                try:
+                    filename = photo_data['filename']
+                    source_path = os.path.join(photos_dir, filename)
+                    
+                    if os.path.exists(source_path):
+                        # Hedef dizini belirle
+                        if photo_data['type'] == 'yazi':
+                            dest_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+                        elif photo_data['type'] == 'ogrenci':
+                            dest_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+                        else:
+                            continue
+                        
+                        os.makedirs(dest_dir, exist_ok=True)
+                        dest_path = os.path.join(dest_dir, filename)
+                        shutil.copy2(source_path, dest_path)
+                        print(f"Fotoğraf kopyalandı: {filename}")
+                except Exception as e:
+                    print(f"Fotoğraf yükleme hatası {filename}: {e}")
+                    continue
+        
+        update_restore_progress(100, 'Geri yükleme başarıyla tamamlandı!')
+        
+        # Geçici dosyaları temizle
+        try:
+            shutil.rmtree(temp_dir)
+        except:
+            pass
+        
+        messages.success(request, '✅ Geri yükleme başarıyla tamamlandı!')
         return redirect('restore_data')
         
     except Exception as e:
+        error_msg = f'Geri yükleme hatası: {str(e)}'
         restore_progress = {
             'status': 'error',
             'progress': 0,
-            'message': f'Dosya işleme hatası: {str(e)}'
+            'message': error_msg
         }
-        messages.error(request, f'Dosya işlenirken hata: {str(e)}')
+        messages.error(request, error_msg)
+        print(f"Restore error: {e}")
+        import traceback
+        traceback.print_exc()
         return redirect('restore_data')
 
 def restore_photo_file(photo_data, photos_dir):

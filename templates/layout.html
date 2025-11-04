@@ -311,12 +311,20 @@
       opacity: 0.9;
     }
     
-    /* PWA Install Button Styles */
+    /* PWA Install Button Styles - Sadece Mobilde Görünsün */
     .pwa-install-container {
       margin-top: 1.5rem;
       opacity: 0;
       transform: translateY(20px);
       transition: all 0.5s ease;
+      display: none; /* Varsayılan olarak gizli */
+    }
+    
+    /* Sadece mobil cihazlarda göster */
+    @media (max-width: 768px) {
+      .pwa-install-container {
+        display: block;
+      }
     }
     
     .pwa-install-container.show {
