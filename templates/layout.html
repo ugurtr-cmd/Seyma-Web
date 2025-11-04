@@ -670,7 +670,7 @@
     <div class="footer-content">
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
       <!-- Ana ekrana ekle - sadece mobilde görünür -->
-      <div id="a2hs" class="a2hs-container">
+      <div id="a2hs" class="a2hs-container show">
         <button id="a2hs-btn" class="btn btn-primary a2hs-btn d-block d-md-none">
           <i class="fa-solid fa-download"></i>
           <span class="ms-1">Ana ekrana ekle</span>
@@ -799,7 +799,10 @@
 
       function showA2HS() {
         if (!a2hsContainer) return;
-        if (isStandalone) return; // yüklüyse gösterme
+        if (isStandalone) {
+          a2hsContainer.classList.remove('show');
+          return; // yüklüyse gösterme
+        }
 
         const isMobile = (window.matchMedia && (window.matchMedia('(max-width: 768px)').matches || window.matchMedia('(pointer: coarse)').matches));
         if (!isMobile) return; // sadece mobilde
@@ -824,8 +827,9 @@
         deferredPrompt = null;
       });
 
-      // İlk yüklemede iOS için yardım, Android için prompt bekle
-      document.addEventListener('DOMContentLoaded', showA2HS);
+  // İlk yüklemede durumu hemen uygula (DOMContentLoaded kaçmış olabilir)
+  showA2HS();
+  document.addEventListener('DOMContentLoaded', showA2HS);
 
       // Tıklama davranışları
       if (a2hsBtn) {
