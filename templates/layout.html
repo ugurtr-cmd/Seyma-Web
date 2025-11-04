@@ -490,6 +490,24 @@
     .fade-in-up {
       animation: fadeInUp 0.6s ease-out;
     }
+
+    /* A2HS (Add to Home Screen) in footer on mobile */
+    .a2hs-container {
+      display: none;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      margin-top: .5rem;
+    }
+    .a2hs-container.show { display: flex; }
+    @media (min-width: 769px) {
+      .a2hs-container { display: none !important; }
+    }
+    .a2hs-btn {
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: 0 8px 20px rgba(13, 110, 253, 0.25);
+    }
     
     /* Responsive Tasarım */
     @media (max-width: 768px) {
@@ -561,7 +579,6 @@
   </style>
   <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
   <meta name="theme-color" content="#0d6efd">
-  <link rel="icon" href="{% static 'pwa/icons/icon.svg' %}" type="image/svg+xml">
 </head>
 <body>
 
@@ -652,8 +669,43 @@
   <footer>
     <div class="footer-content">
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
+      <!-- Ana ekrana ekle - sadece mobilde görünür -->
+      <div id="a2hs" class="a2hs-container">
+        <button id="a2hs-btn" class="btn btn-primary a2hs-btn d-block d-md-none">
+          <i class="fa-solid fa-download"></i>
+          <span class="ms-1">Ana ekrana ekle</span>
+        </button>
+        <button id="ios-help-btn" class="btn btn-outline-light a2hs-btn d-none d-md-none">
+          <i class="fa-brands fa-apple"></i>
+          <span class="ms-1">Nasıl?</span>
+        </button>
+      </div>
     </div>
   </footer>
+
+
+  <!-- iOS Add to Home Screen Modal -->
+  <div class="modal fade" id="iosA2HSModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">iOS: Ana Ekrana Ekle</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <ol class="mb-0">
+            <li>Safari'de alttaki <strong>Paylaş</strong> (⬆️) butonuna dokunun.</li>
+            <li>Menüden <strong>Ana Ekrana Ekle</strong> seçeneğini bulun ve dokunun.</li>
+            <li>İsmi onaylayın ve <strong>Ekle</strong>'ye dokunun.</li>
+          </ol>
+          <p class="text-muted mt-3 mb-0">Not: iOS'ta bu işlem için Safari tarayıcısı gereklidir.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tamam</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -731,6 +783,78 @@
         });
       });
     }
+  </script>
+
+  <script>
+    (function() {
+      let deferredPrompt = null;
+      const a2hsContainer = document.getElementById('a2hs');
+      const a2hsBtn = document.getElementById('a2hs-btn');
+      const iosHelpBtn = document.getElementById('ios-help-btn');
+
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const isSafari = isIOS && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+
+      function showA2HS() {
+        if (!a2hsContainer) return;
+        if (isStandalone) return; // yüklüyse gösterme
+
+        const isMobile = (window.matchMedia && (window.matchMedia('(max-width: 768px)').matches || window.matchMedia('(pointer: coarse)').matches));
+        if (!isMobile) return; // sadece mobilde
+
+        // iOS Safari: beforeinstallprompt yok; yardım butonunu da göster
+        if (isSafari && iosHelpBtn) {
+          iosHelpBtn.classList.remove('d-none');
+        }
+        // Mobilde her zaman butonu göster (Android'de prompt yoksa menü talimatı veririz)
+        a2hsContainer.classList.add('show');
+      }
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // default davranışı engelle, e'yi sakla
+        e.preventDefault();
+        deferredPrompt = e;
+        showA2HS();
+      });
+
+      window.addEventListener('appinstalled', () => {
+        if (a2hsContainer) a2hsContainer.classList.remove('show');
+        deferredPrompt = null;
+      });
+
+      // İlk yüklemede iOS için yardım, Android için prompt bekle
+      document.addEventListener('DOMContentLoaded', showA2HS);
+
+      // Tıklama davranışları
+      if (a2hsBtn) {
+        a2hsBtn.addEventListener('click', async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const choice = await deferredPrompt.userChoice;
+            if (choice && choice.outcome === 'accepted') {
+              a2hsContainer.classList.remove('show');
+            }
+            deferredPrompt = null;
+          } else if (isSafari) {
+            // iOS yardım modalını aç
+            const modal = new bootstrap.Modal(document.getElementById('iosA2HSModal'));
+            modal.show();
+          } else {
+            // Android/Chromium'da prompt yoksa kullanıcıya menüyü göster
+            alert('Ana ekrana eklemek için tarayıcı menüsünden (⋮) "Ana ekrana ekle" seçeneğini kullanın.');
+          }
+        });
+      }
+
+      if (iosHelpBtn) {
+        iosHelpBtn.addEventListener('click', () => {
+          const modal = new bootstrap.Modal(document.getElementById('iosA2HSModal'));
+          modal.show();
+        });
+      }
+    })();
   </script>
 </body>
 </html>
