@@ -47,10 +47,9 @@ urlpatterns = [
     path('admin-paneli/parola_guncelle', views.change_password,name="parola_guncelle"),
     path('cikis', views.user_logout, name="cikis"),
     
-    # PWA Routes - Sadece ana uygulama
+    # PWA
     path('offline/', views.offline_page, name='offline'),
-    path('pwa-test/', views.pwa_test, name='pwa_test'),
-    path('notification-test/', views.notification_test, name='notification_test'),
+    path('sw.js', views.service_worker, name='service_worker'),
     
     # Günlük Mesaj Routes
     path('admin-paneli/gunluk-mesaj-guncelle/', views.gunluk_mesaj_guncelle, name='gunluk_mesaj_guncelle'),

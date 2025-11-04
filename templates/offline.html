@@ -3,87 +3,23 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Offline - Şeyma</title>
-  <link rel="manifest" href="{% static 'manifest.json' %}">
-  <meta name="theme-color" content="#007bff">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Çevrimdışı</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Inter', sans-serif;
-    }
-    .offline-container {
-      text-align: center;
-      background: white;
-      border-radius: 20px;
-      padding: 3rem;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-      max-width: 500px;
-      margin: 20px;
-    }
-    .offline-icon {
-      font-size: 4rem;
-      color: #6c757d;
-      margin-bottom: 1.5rem;
-    }
-    .btn-retry {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: none;
-      border-radius: 25px;
-      padding: 12px 30px;
-      color: white;
-      font-weight: 600;
-      transition: all 0.3s ease;
-    }
-    .btn-retry:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-      color: white;
-    }
+    body { display:flex; min-height:100vh; align-items:center; justify-content:center; background:#f6f8fb; }
+    .card { max-width:540px; border:0; box-shadow:0 10px 30px rgba(0,0,0,.08); }
   </style>
 </head>
 <body>
-  <div class="offline-container">
-    <div class="offline-icon">
-      <i class="fas fa-wifi-slash"></i>
-    </div>
-    <h2 class="mb-3">İnternet Bağlantısı Yok</h2>
-    <p class="text-muted mb-4">
-      Şu anda internet bağlantınız bulunmuyor. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.
-    </p>
-    <button class="btn btn-retry" onclick="window.location.reload()">
-      <i class="fas fa-redo-alt me-2"></i>
-      Tekrar Dene
-    </button>
-    <div class="mt-4">
-      <small class="text-muted">
-        <i class="fas fa-info-circle me-1"></i>
-        Bazı sayfalar offline olarak görüntülenebilir
-      </small>
+  <div class="card p-4 text-center">
+    <div class="mb-3" style="font-size:3rem">📴</div>
+    <h1 class="h4 mb-2">Bağlantı yok</h1>
+    <p class="text-muted mb-4">İnternet bağlantınız kesildi. Bağlantı geldiğinde sayfayı yenileyin.</p>
+    <div>
+      <a class="btn btn-primary" href="/">Ana sayfaya dön</a>
+      <button class="btn btn-outline-secondary ms-2" onclick="location.reload()">Yenile</button>
     </div>
   </div>
-
-  <script>
-    // Online olduğunda otomatik yenile
-    window.addEventListener('online', function() {
-      window.location.reload();
-    });
-
-    // Connection durumunu kontrol et
-    function checkConnection() {
-      if (navigator.onLine) {
-        window.location.reload();
-      }
-    }
-
-    // Her 5 saniyede bir bağlantıyı kontrol et
-    setInterval(checkConnection, 5000);
-  </script>
 </body>
 </html>

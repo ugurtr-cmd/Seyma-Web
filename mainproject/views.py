@@ -1,4 +1,5 @@
 import os
+import os
 import re
 import json
 import random
@@ -2949,17 +2950,6 @@ def ogrenci_sil(request, ogrenci_id):
     return render(request, 'ogrenci_sil_onay.html', {'ogrenci': ogrenci})
 
 
-# PWA Offline Page
-def offline_page(request):
-    """PWA offline sayfası"""
-    return render(request, 'offline.html')
-
-
-def pwa_test(request):
-    """PWA test sayfası"""
-    return render(request, 'pwa-test.html')
-
-
 # =================== GÜNLÜK MESAJ SİSTEMİ ===================
 
 def gunluk_mesaj_olustur():
@@ -3125,136 +3115,24 @@ from .notification_views import (
     gunluk_mesaj_bildirimi_api, 
     haftalik_rapor_bildirimi_api
 )
+    # --- PWA Minimal Views ---
+def offline_page(request):
+    """Basit çevrimdışı sayfası"""
+    return render(request, 'offline.html')
 
-def notification_test(request):
-    """Bildirim test sayfası"""
-    return render(request, 'notification_test.html')
-
-
-def seyma_sor_pwa(request):
-    """Şeyma'ya Sor PWA uygulaması"""
-    if request.method == 'POST':
-        # JSON verisi mi form verisi mi kontrol et
-        if request.content_type == 'application/json':
-            data = json.loads(request.body)
-            sorgu = data.get('sorgu', '')
-        else:
-            sorgu = request.POST.get('sorgu', '')
-        
-        if not sorgu or len(sorgu.strip()) == 0:
-            return JsonResponse({'error': 'Sorgu boş olamaz'}, status=400)
-        
-        # Ana arama motoru fonksiyonunu kullan
-        # Önbellek anahtarı oluştur
-        cache_key = f"gemini_{hash(sorgu)}"
-        cached_response = cache.get(cache_key)
-        
-        if cached_response:
-            return JsonResponse({
-                'cevap': cached_response,
-                'sorgu': sorgu,
-                'cached': True
-            })
-        
-        # Gemini API isteği
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'X-goog-api-key': settings.GEMINI_API_KEY
-        }
-        
-        # Daha iyi formatlanmış yanıt almak için prompt'u optimize et
-        prompt = (
-            f"Şeyma adında birine cevap verir gibi yanıtla. Karşındaki kişi bir kuran öğretmeni ve hafız. İsmi Şeyma çok zeki, çok güzel, çok değerli"
-            f"Seninle konuşan ve konuştuğun karşındaki kişi olan Şeyma, Amine Hatun Kuran Kursunda Hafızlık Hazırlık Öğretmeni"
-            f"Kullanıcının sorusu: {sorgu}. "
-            f"Cevabın samimi, dostane ve bilgilendirici olsun. "
-            f"Lütfen yanıtını aşağıdaki kurallara göre formatla:\n"
-            f"1. Başlıklar için **kalın** kullan\n"
-            f"2. Maddeler için * işareti kullan\n"
-            f"3. Her maddeyi yeni satırda başlat\n"
-            f"4. Paragraflar arasında boşluk bırak\n"
-            f"6. HTML etiketi kullanma, sadece * ve ** işaretleri kullan."
+def service_worker(request):
+    """Kökten erişilebilen service worker dosyasını döndür"""
+    sw_path = os.path.join(settings.BASE_DIR, 'static', 'sw.js')
+    try:
+        with open(sw_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HttpResponse(content, content_type='application/javascript')
+    except Exception:
+        # Dosya okunamazsa minimum bir SW içeriği ile dön
+        fallback_js = (
+            "const CACHE_NAME='seyma-pwa-fallback';"\
+            "self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));"\
+            "self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));"\
+            "self.addEventListener('fetch',()=>{});"
         )
-
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": prompt
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.7,
-                "topK": 40,
-                "topP": 0.95,
-                "maxOutputTokens": 1024,
-            }
-        }
-        
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            # Yanıtı çıkar
-            if (result.get('candidates') and 
-                len(result['candidates']) > 0 and 
-                result['candidates'][0].get('content') and
-                result['candidates'][0]['content'].get('parts') and
-                len(result['candidates'][0]['content']['parts']) > 0):
-                
-                cevap = result['candidates'][0]['content']['parts'][0]['text']
-                
-                # Metni formatla
-                formatted_cevap = format_gemini_response(cevap)
-                
-                # Önbelleğe al (1 saat)
-                cache.set(cache_key, formatted_cevap, 3600)
-                
-                return JsonResponse({
-                    'cevap': formatted_cevap,
-                    'sorgu': sorgu,
-                    'success': True
-                })
-            else:
-                return JsonResponse({
-                    'error': 'API yanıt formatı beklenen şekilde değil'
-                }, status=500)
-                
-        except requests.exceptions.HTTPError as e:
-            error_msg = f"HTTP hatası: {str(e)}"
-            if hasattr(e, 'response') and e.response.status_code == 429:
-                error_msg = "Şu anda çok fazla istek yapıldı. Lütfen bir süre sonra tekrar deneyin."
-            return JsonResponse({'error': error_msg}, status=500)
-            
-        except requests.exceptions.RequestException as e:
-            return JsonResponse({'error': f'Bağlantı hatası: {str(e)}'}, status=500)
-        except Exception as e:
-            return JsonResponse({'error': f'Bilinmeyen hata: {str(e)}'}, status=500)
-    
-    # GET isteği için sayfa render et
-    context = {}
-    return render(request, 'seyma_sor_pwa.html', context)
-
-
-def seyma_sor_manifest(request):
-    """Şeyma'ya Sor PWA için manifest dosyası"""
-    with open('staticfiles/seyma-sor-manifest.json', 'r', encoding='utf-8') as f:
-        manifest_data = json.load(f)
-    
-    return JsonResponse(manifest_data, content_type='application/manifest+json')
-
-
-def seyma_sor_service_worker(request):
-    """Şeyma'ya Sor PWA için service worker"""
-    with open('staticfiles/sw-seyma-sor.js', 'r', encoding='utf-8') as f:
-        sw_content = f.read()
-    
-    return HttpResponse(sw_content, content_type='application/javascript')
-    return render(request, 'notification_test.html')
+        return HttpResponse(fallback_js, content_type='application/javascript')
