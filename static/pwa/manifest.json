@@ -1,24 +1,29 @@
 {
-  "name": "Şeyma",
+  "name": "Şeyma - Kişisel Blog ve Eğitim Takip",
   "short_name": "Şeyma",
-  "description": "Şeyma - Blog ve eğitim takip uygulaması",
+  "description": "Kur'an ezberi ve eğitim takip sistemi. Öğrencilerin Elif Ba ve Sure ezberlerini takip edin.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#0d6efd",
+  "theme_color": "#667eea",
   "icons": [
     {
       "src": "/static/blog/img/favicon2.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/static/blog/img/favicon2.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
+  "categories": ["education", "productivity"],
   "lang": "tr-TR",
-  "dir": "ltr"
+  "dir": "ltr",
+  "prefer_related_applications": false
 }

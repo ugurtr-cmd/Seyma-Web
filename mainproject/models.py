@@ -307,7 +307,7 @@ class GunlukMesaj(models.Model):
 
 
 class BildirimAbonelik(models.Model):
-    """PWA bildirim abonelik bilgileri"""
+    """Web bildirim abonelik bilgileri"""
     endpoint = models.TextField(unique=True)
     p256dh_key = models.TextField()
     auth_key = models.TextField()

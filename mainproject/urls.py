@@ -47,7 +47,7 @@ urlpatterns = [
     path('admin-paneli/parola_guncelle', views.change_password,name="parola_guncelle"),
     path('cikis', views.user_logout, name="cikis"),
     
-    # PWA
+    # PWA Routes
     path('offline/', views.offline_page, name='offline'),
     path('sw.js', views.service_worker, name='service_worker'),
     

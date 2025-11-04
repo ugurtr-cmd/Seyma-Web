@@ -3115,24 +3115,28 @@ from .notification_views import (
     gunluk_mesaj_bildirimi_api, 
     haftalik_rapor_bildirimi_api
 )
-    # --- PWA Minimal Views ---
+
+# ============================================
+# PWA Views
+# ============================================
+
 def offline_page(request):
-    """Basit çevrimdışı sayfası"""
+    """Çevrimdışı sayfası"""
     return render(request, 'offline.html')
 
 def service_worker(request):
-    """Kökten erişilebilen service worker dosyasını döndür"""
+    """Service Worker dosyasını serve et"""
     sw_path = os.path.join(settings.BASE_DIR, 'static', 'sw.js')
     try:
         with open(sw_path, 'r', encoding='utf-8') as f:
             content = f.read()
         return HttpResponse(content, content_type='application/javascript')
-    except Exception:
-        # Dosya okunamazsa minimum bir SW içeriği ile dön
-        fallback_js = (
-            "const CACHE_NAME='seyma-pwa-fallback';"\
-            "self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));"\
-            "self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));"\
-            "self.addEventListener('fetch',()=>{});"
-        )
-        return HttpResponse(fallback_js, content_type='application/javascript')
+    except FileNotFoundError:
+        # Fallback minimal service worker
+        fallback_sw = """
+const CACHE_NAME = 'seyma-fallback';
+self.addEventListener('install', (e) => e.waitUntil(self.skipWaiting()));
+self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', () => {});
+"""
+        return HttpResponse(fallback_sw, content_type='application/javascript')

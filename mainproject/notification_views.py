@@ -9,7 +9,7 @@ from .notification_service import bildirim_servisi
 @csrf_exempt
 @require_http_methods(["POST"])
 def bildirim_abonelik_kaydet(request):
-    """PWA bildirim aboneliği kaydet"""
+    """Bildirim aboneliği kaydet"""
     try:
         data = json.loads(request.body)
         endpoint = data.get('endpoint')

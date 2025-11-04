@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class BildirimServisi:
-    """PWA bildirimleri gönderme servisi"""
+    """Web bildirimleri gönderme servisi"""
     
     def __init__(self):
         # VAPID anahtarları (üretimde environment değişkenlerinden alınmalı)
@@ -51,8 +51,8 @@ class BildirimServisi:
         payload = {
             'title': baslik,
             'body': icerik,
-            'icon': '/static/pwa/icon.svg',
-            'badge': '/static/pwa/icon.svg',
+            'icon': '/static/blog/img/favicon2.png',
+            'badge': '/static/blog/img/favicon2.png',
             'tag': tag or tip.lower(),
             'data': {
                 'tip': tip,

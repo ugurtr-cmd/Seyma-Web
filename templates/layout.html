@@ -17,8 +17,12 @@
   <!-- PNG ikon -->
   <link rel="icon" type="image/png" href="{% static 'blog/img/favicon2.png' %}">
 
-  <!-- PWA Mobil Optimizasyon CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Şeyma">
 
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
@@ -307,172 +311,192 @@
       opacity: 0.9;
     }
     
-    /* PWA Install Button - Mobil Öncelikli */
-    .pwa-install-mobile {
-      display: flex !important; /* Mobilde her zaman göster */
-      gap: 10px !important;
-      flex-wrap: wrap !important;
-      justify-content: center !important;
-      margin-top: 1rem !important;
-      width: 100% !important;
-      pointer-events: auto !important;
-      position: relative !important;
-      z-index: 5 !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-      transition: all 0.3s ease !important;
+    /* PWA Install Button Styles */
+    .pwa-install-container {
+      margin-top: 1.5rem;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease;
     }
     
-    .pwa-install-mobile.show {
-      display: flex !important;
-      opacity: 1 !important;
-      visibility: visible !important;
+    .pwa-install-container.show {
+      opacity: 1;
+      transform: translateY(0);
     }
     
-    /* Masaüstünde daha az belirgin yap */
-    @media (min-width: 769px) and (pointer: fine) {
-      .pwa-install-mobile {
-        opacity: 0.6 !important;
+    .btn-install-pwa {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 16px 40px;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+      text-decoration: none;
+    }
+    
+    .btn-install-pwa:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+      color: white;
+    }
+    
+    .btn-install-pwa:active {
+      transform: translateY(-1px);
+    }
+    
+    .btn-install-pwa i {
+      font-size: 1.3rem;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0);
       }
-      .pwa-install-mobile:hover {
-        opacity: 1 !important;
-      }
-    }
-    
-    /* Sadece çok küçük ekranlarda gizle */
-    @media (max-width: 320px) {
-      .pwa-install-mobile {
-        flex-direction: column !important;
-        gap: 8px !important;
-      }
-    }
-    
-    .btn-pwa-install {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-      color: white !important;
-      border: none !important;
-      padding: 14px 20px !important;
-      border-radius: 25px !important;
-      font-size: 16px !important;
-      font-weight: 600 !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 8px !important;
-      transition: all 0.3s ease !important;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
-      cursor: pointer !important;
-      text-decoration: none !important;
-      min-height: 48px !important;
-      flex: 1 !important;
-      min-width: 150px !important;
-      max-width: 200px !important;
-      pointer-events: auto !important;
-      position: relative !important;
-      z-index: 10 !important;
-      user-select: none !important;
-      -webkit-tap-highlight-color: transparent !important;
-      touch-action: manipulation !important;
-    }
-    
-    .btn-pwa-install:hover,
-    .btn-pwa-install:focus,
-    .btn-pwa-install:active {
-      transform: translateY(-2px) !important;
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4) !important;
-      background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
-      color: white !important;
-      text-decoration: none !important;
-    }
-    
-    .btn-pwa-install:active {
-      transform: translateY(0px) scale(0.98) !important;
-    }
-    
-    .btn-pwa-ask {
-      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%) !important;
-      box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3) !important;
-    }
-    
-    .btn-pwa-ask:hover,
-    .btn-pwa-ask:focus,
-    .btn-pwa-ask:active {
-      background: linear-gradient(135deg, #ff8a80 0%, #fec5ea 100%) !important;
-      box-shadow: 0 8px 25px rgba(255, 154, 158, 0.4) !important;
-      color: white !important;
-    }
-    
-    /* Mobil cihazlarda PWA butonunu optimize et */
-    @media (max-width: 768px) {
-      .pwa-install-mobile {
-        flex-direction: column !important;
-        gap: 12px !important;
-        padding: 0 10px !important;
-      }
-      
-      .btn-pwa-install {
-        font-size: 16px !important;
-        padding: 16px 20px !important;
-        flex: none !important;
-        width: 100% !important;
-        max-width: none !important;
-        min-height: 52px !important;
-      }
-      
-      .btn-pwa-install i {
-        font-size: 18px !important;
+      50% {
+        transform: translateY(-5px);
       }
     }
     
-    @media (max-width: 480px) {
-      .pwa-install-mobile {
-        gap: 10px !important;
-        padding: 0 5px !important;
+    .install-info {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      opacity: 0.8;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    /* iOS Install Instructions Modal Styles */
+    .ios-install-modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+    }
+    
+    .ios-install-modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .ios-modal-content {
+      background: white;
+      color: #2d3748;
+      padding: 2rem;
+      border-radius: 20px;
+      max-width: 500px;
+      margin: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+      from {
+        transform: translateY(50px);
+        opacity: 0;
       }
-      
-      .btn-pwa-install {
-        font-size: 15px !important;
-        padding: 14px 16px !important;
-        min-height: 50px !important;
-      }
-      
-      .btn-pwa-install span {
-        font-size: 15px !important;
+      to {
+        transform: translateY(0);
+        opacity: 1;
       }
     }
     
-    /* Touch cihazlarda PWA butonunu optimize et */
-    @media (pointer: coarse) {
-      .pwa-install-mobile {
-        display: none !important; /* JavaScript ile kontrol edilecek */
-      }
-      
-      .btn-pwa-install {
-        min-height: 48px !important;
-        touch-action: manipulation !important;
-        -webkit-tap-highlight-color: transparent !important;
-      }
+    .ios-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
     }
     
-    /* Yüksek yoğunluk ekranlar için */
-    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-      .btn-pwa-install {
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      }
+    .ios-modal-header h3 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: #667eea;
     }
     
-    /* PWA yüklendiyse gizle */
-    @media (display-mode: standalone) {
-      .pwa-install-mobile {
-        display: none !important;
-      }
+    .ios-close-btn {
+      background: none;
+      border: none;
+      font-size: 1.8rem;
+      color: #718096;
+      cursor: pointer;
+      padding: 0;
+      width: 35px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
     }
     
-    /* iOS Safari standalone mod */
-    @media (display-mode: standalone) and (-webkit-touch-callout: none) {
-      .pwa-install-mobile {
-        display: none !important;
-      }
+    .ios-close-btn:hover {
+      background: #f7fafc;
+      color: #2d3748;
+    }
+    
+    .ios-steps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .ios-steps li {
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      background: #f7fafc;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .ios-steps .step-number {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    
+    .ios-steps .step-text {
+      flex: 1;
+      line-height: 1.6;
+    }
+    
+    .ios-note {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #92400e;
     }
     
     /* Animasyonlar */
@@ -489,24 +513,6 @@
     
     .fade-in-up {
       animation: fadeInUp 0.6s ease-out;
-    }
-
-    /* A2HS (Add to Home Screen) in footer on mobile */
-    .a2hs-container {
-      display: none;
-      gap: 10px;
-      align-items: center;
-      justify-content: center;
-      margin-top: .5rem;
-    }
-    .a2hs-container.show { display: flex; }
-    @media (min-width: 769px) {
-      .a2hs-container { display: none !important; }
-    }
-    .a2hs-btn {
-      border-radius: 999px;
-      padding: 10px 14px;
-      box-shadow: 0 8px 20px rgba(13, 110, 253, 0.25);
     }
     
     /* Responsive Tasarım */
@@ -577,8 +583,6 @@
       }
     }
   </style>
-  <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
-  <meta name="theme-color" content="#0d6efd">
 </head>
 <body>
 
@@ -669,40 +673,43 @@
   <footer>
     <div class="footer-content">
       <p>&copy; 2025 Şeyma | Tüm hakları saklıdır.</p>
-      <!-- Ana ekrana ekle - sadece mobilde görünür -->
-      <div id="a2hs" class="a2hs-container show">
-        <button id="a2hs-btn" class="btn btn-primary a2hs-btn d-block d-md-none">
-          <i class="fa-solid fa-download"></i>
-          <span class="ms-1">Ana ekrana ekle</span>
+      
+      <!-- PWA Install Button -->
+      <div class="pwa-install-container" id="pwaInstallContainer">
+        <button class="btn-install-pwa" id="btnInstallPwa">
+          <i class="fas fa-download"></i>
+          <span>Uygulamayı Yükle</span>
         </button>
-        <button id="ios-help-btn" class="btn btn-outline-light a2hs-btn d-none d-md-none">
-          <i class="fa-brands fa-apple"></i>
-          <span class="ms-1">Nasıl?</span>
-        </button>
+        <p class="install-info">
+          📱 Ana ekranınıza ekleyerek daha hızlı erişim sağlayın
+        </p>
       </div>
     </div>
   </footer>
 
-
-  <!-- iOS Add to Home Screen Modal -->
-  <div class="modal fade" id="iosA2HSModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">iOS: Ana Ekrana Ekle</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <ol class="mb-0">
-            <li>Safari'de alttaki <strong>Paylaş</strong> (⬆️) butonuna dokunun.</li>
-            <li>Menüden <strong>Ana Ekrana Ekle</strong> seçeneğini bulun ve dokunun.</li>
-            <li>İsmi onaylayın ve <strong>Ekle</strong>'ye dokunun.</li>
-          </ol>
-          <p class="text-muted mt-3 mb-0">Not: iOS'ta bu işlem için Safari tarayıcısı gereklidir.</p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tamam</button>
-        </div>
+  <!-- iOS Install Instructions Modal -->
+  <div class="ios-install-modal" id="iosInstallModal">
+    <div class="ios-modal-content">
+      <div class="ios-modal-header">
+        <h3>📱 iOS'ta Nasıl Yüklenir?</h3>
+        <button class="ios-close-btn" id="iosCloseBtn">&times;</button>
+      </div>
+      <ol class="ios-steps">
+        <li>
+          <span class="step-number">1</span>
+          <span class="step-text">Safari tarayıcısında <strong>Paylaş</strong> butonuna (<i class="fas fa-share"></i>) dokunun</span>
+        </li>
+        <li>
+          <span class="step-number">2</span>
+          <span class="step-text">Açılan menüden <strong>"Ana Ekrana Ekle"</strong> seçeneğini bulun</span>
+        </li>
+        <li>
+          <span class="step-number">3</span>
+          <span class="step-text">Uygulama ismini onaylayın ve <strong>"Ekle"</strong> butonuna dokunun</span>
+        </li>
+      </ol>
+      <div class="ios-note">
+        <strong>💡 Not:</strong> iOS'ta bu işlem için Safari tarayıcısı kullanılmalıdır.
       </div>
     </div>
   </div>
@@ -773,92 +780,180 @@
       return cookieValue;
     }
   </script>
+
+  <!-- PWA Installation Script -->
   <script>
+    // Service Worker kaydı
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/sw.js').then(function (reg) {
-          console.log('ServiceWorker registered:', reg.scope);
-        }).catch(function (err) {
-          console.warn('ServiceWorker registration failed:', err);
-        });
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(function(registration) {
+            console.log('✅ Service Worker başarıyla kaydedildi:', registration.scope);
+          })
+          .catch(function(error) {
+            console.log('❌ Service Worker kayıt hatası:', error);
+          });
       });
     }
-  </script>
 
-  <script>
-    (function() {
-      let deferredPrompt = null;
-      const a2hsContainer = document.getElementById('a2hs');
-      const a2hsBtn = document.getElementById('a2hs-btn');
-      const iosHelpBtn = document.getElementById('ios-help-btn');
+    // PWA Kurulum Yönetimi
+    let deferredPrompt = null;
+    const pwaContainer = document.getElementById('pwaInstallContainer');
+    const btnInstall = document.getElementById('btnInstallPwa');
+    const iosModal = document.getElementById('iosInstallModal');
+    const iosCloseBtn = document.getElementById('iosCloseBtn');
 
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-      const ua = navigator.userAgent || '';
-      const isIOS = /iPhone|iPad|iPod/i.test(ua);
-      const isSafari = isIOS && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+    // Cihaz ve tarayıcı kontrolü
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         window.navigator.standalone === true;
 
-      function showA2HS() {
-        if (!a2hsContainer) return;
-        if (isStandalone) {
-          a2hsContainer.classList.remove('show');
-          return; // yüklüyse gösterme
-        }
-
-        const isMobile = (window.matchMedia && (window.matchMedia('(max-width: 768px)').matches || window.matchMedia('(pointer: coarse)').matches));
-        if (!isMobile) return; // sadece mobilde
-
-        // iOS Safari: beforeinstallprompt yok; yardım butonunu da göster
-        if (isSafari && iosHelpBtn) {
-          iosHelpBtn.classList.remove('d-none');
-        }
-        // Mobilde her zaman butonu göster (Android'de prompt yoksa menü talimatı veririz)
-        a2hsContainer.classList.add('show');
+    // Uygulama zaten yüklüyse butonu gösterme
+    if (isStandalone) {
+      console.log('✅ Uygulama zaten yüklenmiş durumda');
+      if (pwaContainer) {
+        pwaContainer.remove();
       }
+    } else {
+      // Kurulum butonu göster
+      if (pwaContainer) {
+        setTimeout(() => {
+          pwaContainer.classList.add('show');
+        }, 1000);
+      }
+    }
 
-      window.addEventListener('beforeinstallprompt', (e) => {
-        // default davranışı engelle, e'yi sakla
-        e.preventDefault();
-        deferredPrompt = e;
-        showA2HS();
-      });
+    // beforeinstallprompt olayını yakala (Android/Chrome)
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('📥 PWA kurulum prompt\'u hazır');
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      // Butonu göster
+      if (pwaContainer) {
+        pwaContainer.classList.add('show');
+      }
+    });
 
-      window.addEventListener('appinstalled', () => {
-        if (a2hsContainer) a2hsContainer.classList.remove('show');
-        deferredPrompt = null;
-      });
-
-  // İlk yüklemede durumu hemen uygula (DOMContentLoaded kaçmış olabilir)
-  showA2HS();
-  document.addEventListener('DOMContentLoaded', showA2HS);
-
-      // Tıklama davranışları
-      if (a2hsBtn) {
-        a2hsBtn.addEventListener('click', async () => {
-          if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const choice = await deferredPrompt.userChoice;
-            if (choice && choice.outcome === 'accepted') {
-              a2hsContainer.classList.remove('show');
-            }
-            deferredPrompt = null;
-          } else if (isSafari) {
-            // iOS yardım modalını aç
-            const modal = new bootstrap.Modal(document.getElementById('iosA2HSModal'));
-            modal.show();
-          } else {
-            // Android/Chromium'da prompt yoksa kullanıcıya menüyü göster
-            alert('Ana ekrana eklemek için tarayıcı menüsünden (⋮) "Ana ekrana ekle" seçeneğini kullanın.');
+    // Kurulum butonuna tıklama
+    if (btnInstall) {
+      btnInstall.addEventListener('click', async function() {
+        console.log('🔘 Kurulum butonuna tıklandı');
+        
+        // iOS için özel talimatlar
+        if (isIOS) {
+          console.log('📱 iOS cihaz tespit edildi, modal gösteriliyor');
+          if (iosModal) {
+            iosModal.classList.add('show');
           }
-        });
+          return;
+        }
+
+        // Android/Chrome için otomatik kurulum
+        if (deferredPrompt) {
+          console.log('🚀 Kurulum prompt\'u gösteriliyor');
+          deferredPrompt.prompt();
+          
+          const choiceResult = await deferredPrompt.userChoice;
+          
+          if (choiceResult.outcome === 'accepted') {
+            console.log('✅ Kullanıcı uygulamayı yükledi');
+            // Başarılı kurulum bildirimi
+            if (pwaContainer) {
+              pwaContainer.innerHTML = `
+                <div style="color: #10b981; font-size: 1.1rem; font-weight: 600;">
+                  <i class="fas fa-check-circle"></i>
+                  Uygulama başarıyla yüklendi! 🎉
+                </div>
+              `;
+              setTimeout(() => {
+                pwaContainer.style.opacity = '0';
+                setTimeout(() => pwaContainer.remove(), 500);
+              }, 3000);
+            }
+          } else {
+            console.log('❌ Kullanıcı kurulumu iptal etti');
+          }
+          
+          deferredPrompt = null;
+        } else {
+          // Prompt yoksa manuel talimatlar
+          console.log('ℹ️ Prompt yok, manuel talimatlar gösteriliyor');
+          showManualInstructions();
+        }
+      });
+    }
+
+    // iOS modal kapatma
+    if (iosCloseBtn) {
+      iosCloseBtn.addEventListener('click', function() {
+        if (iosModal) {
+          iosModal.classList.remove('show');
+        }
+      });
+    }
+
+    // Modal dış tıklama ile kapatma
+    if (iosModal) {
+      iosModal.addEventListener('click', function(e) {
+        if (e.target === iosModal) {
+          iosModal.classList.remove('show');
+        }
+      });
+    }
+
+    // Uygulama kurulduğunda
+    window.addEventListener('appinstalled', () => {
+      console.log('✅ PWA başarıyla kuruldu!');
+      if (pwaContainer) {
+        pwaContainer.innerHTML = `
+          <div style="color: #10b981; font-size: 1.1rem; font-weight: 600;">
+            <i class="fas fa-check-circle"></i>
+            Başarıyla yüklendi! 🎉
+          </div>
+        `;
+        setTimeout(() => {
+          pwaContainer.style.opacity = '0';
+          setTimeout(() => pwaContainer.remove(), 500);
+        }, 3000);
+      }
+    });
+
+    // Manuel kurulum talimatları
+    function showManualInstructions() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      let message = '';
+
+      if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
+        message = '📱 Chrome\'da Ana Ekrana Ekleme:\n\n' +
+                  '1. Sağ üstteki ⋮ menüyü açın\n' +
+                  '2. "Ana ekrana ekle" seçeneğine tıklayın\n' +
+                  '3. "Yükle" butonuna basın';
+      } else if (userAgent.includes('firefox')) {
+        message = '📱 Firefox\'ta Ana Ekrana Ekleme:\n\n' +
+                  '1. Sağ üstteki ☰ menüyü açın\n' +
+                  '2. "Ana ekrana ekle" seçeneğine tıklayın';
+      } else if (userAgent.includes('edg')) {
+        message = '📱 Edge\'de Ana Ekrana Ekleme:\n\n' +
+                  '1. Sağ üstteki ⋯ menüyü açın\n' +
+                  '2. "Uygulamalar" > "Bu siteyi uygulama olarak yükle"';
+      } else if (userAgent.includes('safari')) {
+        message = '📱 Safari\'de Ana Ekrana Ekleme:\n\n' +
+                  '1. Alttaki Paylaş butonuna (⬆️) dokunun\n' +
+                  '2. "Ana Ekrana Ekle" seçeneğini bulun\n' +
+                  '3. "Ekle" butonuna basın';
+      } else {
+        message = '📱 Ana Ekrana Ekleme:\n\n' +
+                  'Tarayıcı menüsünden "Ana ekrana ekle" veya\n' +
+                  '"Uygulama olarak yükle" seçeneğini kullanın.';
       }
 
-      if (iosHelpBtn) {
-        iosHelpBtn.addEventListener('click', () => {
-          const modal = new bootstrap.Modal(document.getElementById('iosA2HSModal'));
-          modal.show();
-        });
-      }
-    })();
+      alert(message);
+    }
+
+    console.log('🎯 PWA script yüklendi');
+    console.log('📱 iOS:', isIOS);
+    console.log('🖥️ Standalone:', isStandalone);
   </script>
 </body>
 </html>
