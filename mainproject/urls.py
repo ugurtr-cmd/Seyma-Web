@@ -50,12 +50,7 @@ urlpatterns = [
     # PWA Routes
     path('offline/', views.offline_page, name='offline'),
     path('sw.js', views.service_worker, name='service_worker'),
-    path('sw-seymasor.js', views.service_worker_seymasor, name='service_worker_seymasor'),
     
-    # Günlük Mesaj Routes
-    path('admin-paneli/gunluk-mesaj-guncelle/', views.gunluk_mesaj_guncelle, name='gunluk_mesaj_guncelle'),
-    path('admin-paneli/gunluk-mesaj-tepki/', views.gunluk_mesaj_tepki, name='gunluk_mesaj_tepki'),
-
     # Bildirim API Routes
     path('api/bildirim-abonelik/', views.bildirim_abonelik_kaydet, name='bildirim_abonelik'),
     path('api/test-bildirim/', views.test_bildirim_gonder, name='test_bildirim'),

@@ -19,6 +19,7 @@
 
   <!-- PWA Meta Tags -->
   <link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+  <link rel="apple-touch-icon" href="{% static 'pwa/icons/icon-192x192.png' %}">
   <meta name="theme-color" content="#667eea">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -391,30 +392,6 @@
       width: 100%;
     }
     
-    /* Şeyma'ya Sor Özel Buton Stili */
-    .btn-install-seymasor {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
-      box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4) !important;
-    }
-    
-    .btn-install-seymasor:hover {
-      box-shadow: 0 15px 40px rgba(245, 87, 108, 0.5) !important;
-      transform: translateY(-3px) !important;
-    }
-    
-    .btn-install-seymasor i {
-      animation: pulse 2s ease-in-out infinite !important;
-    }
-    
-    @keyframes pulse {
-      0%, 100% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.1);
-      }
-    }
-    
     /* Mobilde yan yana göster */
     @media (min-width: 600px) and (max-width: 768px) {
       .pwa-buttons-container {
@@ -749,17 +726,6 @@
           </button>
           <p class="install-info">
             📱 Ana ekranınıza ekleyerek daha hızlı erişim sağlayın
-          </p>
-        </div>
-
-        <!-- Şeyma'ya Sor PWA Butonu -->
-        <div class="pwa-install-container" id="seymaSorInstallContainer">
-          <a href="/arama-motoru/?pwa_prompt=1" class="btn-install-pwa btn-install-seymasor" id="btnInstallSeymaSor">
-            <i class="fas fa-brain"></i>
-            <span>Şeyma'ya Sor'u Yükle</span>
-          </a>
-          <p class="install-info">
-            🤖 AI asistanı ana ekranınıza ekleyin
           </p>
         </div>
       </div>
