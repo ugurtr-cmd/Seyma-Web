@@ -1,6 +1,7 @@
 from django.urls import path
 from django.http import HttpResponse
 from . import views
+from . import bildirim_views
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -34,6 +35,8 @@ urlpatterns = [
     path('admin-paneli/ogrenciler/', views.ogrenci_listesi, name='ogrenci_listesi'),
     path('admin-paneli/ogrenci/ekle/', views.ogrenci_ekle, name='yeni_ogrenci'),
     path('admin-paneli/ogrenci/duzenle/<int:id>/', views.ogrenci_duzenle, name='ogrenci_duzenle'),
+    path('admin-paneli/ogrenci/<int:id>/toplu-elifba-durum/', views.toplu_elifba_durum_degistir, name='toplu_elifba_durum'),
+    path('admin-paneli/ogrenci/<int:id>/toplu-ezber-durum/', views.toplu_ezber_durum_degistir, name='toplu_ezber_durum'),
     path('admin-paneli/ogrenci/<int:id>/not/', views.ogrenci_not_ekle, name='ogrenci_not_ekle'),
     path('ogrenci/sil/<int:ogrenci_id>/', views.ogrenci_sil, name='ogrenci_sil'),
     path('ogrenci/<int:id>/ezber-ekle/', views.ezber_ekle, name='ezber_ekle'),
@@ -56,4 +59,8 @@ urlpatterns = [
     path('api/test-bildirim/', views.test_bildirim_gonder, name='test_bildirim'),
     path('api/daily-message-notification/', views.gunluk_mesaj_bildirimi_api, name='daily_message_notification'),
     path('api/weekly-report-notification/', views.haftalik_rapor_bildirimi_api, name='weekly_report_notification'),
+    
+    # Akıllı Bildirim Routes
+    path('bildirim-okundu/<int:bildirim_id>/', bildirim_views.bildirim_okundu, name='bildirim_okundu'),
+    path('yeni-gunluk-bildirim/', bildirim_views.yeni_gunluk_bildirim, name='yeni_gunluk_bildirim'),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

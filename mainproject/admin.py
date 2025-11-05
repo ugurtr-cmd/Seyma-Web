@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Ogrenci, EzberSuresi, EzberKaydi, Ders, DersNotu, SinavSonucu,
-    ElifBaEzberi, ElifBaEzberDurumu, Alinti, GunlukMesaj
+    ElifBaEzberi, ElifBaEzberDurumu, Alinti, GunlukMesaj,
+    KonusmaOturumu, KonusmaMesaji
 )
 
 @admin.register(Ogrenci)
@@ -89,3 +90,38 @@ class GunlukMesajAdmin(admin.ModelAdmin):
     def mesaj_ozeti(self, obj):
         return obj.mesaj_ozeti()
     mesaj_ozeti.short_description = 'Mesaj Özeti'
+
+
+class KonusmaMesajiInline(admin.TabularInline):
+    model = KonusmaMesaji
+    extra = 0
+    readonly_fields = ['tip', 'icerik', 'zaman']
+    can_delete = False
+    max_num = 0  # Yeni mesaj eklemeyi devre dışı bırak
+
+
+@admin.register(KonusmaOturumu)
+class KonusmaOturumuAdmin(admin.ModelAdmin):
+    list_display = ['kullanici', 'baslik', 'mesaj_sayisi', 'baslama_zamani', 'son_mesaj_zamani', 'aktif']
+    list_filter = ['aktif', 'baslama_zamani']
+    search_fields = ['kullanici__username', 'baslik']
+    readonly_fields = ['baslama_zamani', 'son_mesaj_zamani']
+    inlines = [KonusmaMesajiInline]
+    date_hierarchy = 'baslama_zamani'
+    
+    def mesaj_sayisi(self, obj):
+        return obj.mesaj_sayisi()
+    mesaj_sayisi.short_description = 'Mesaj Sayısı'
+
+
+@admin.register(KonusmaMesaji)
+class KonusmaMesajiAdmin(admin.ModelAdmin):
+    list_display = ['oturum', 'tip', 'icerik_ozet', 'zaman']
+    list_filter = ['tip', 'zaman']
+    search_fields = ['icerik', 'oturum__kullanici__username']
+    readonly_fields = ['zaman']
+    date_hierarchy = 'zaman'
+    
+    def icerik_ozet(self, obj):
+        return obj.icerik[:50] + "..." if len(obj.icerik) > 50 else obj.icerik
+    icerik_ozet.short_description = 'İçerik'

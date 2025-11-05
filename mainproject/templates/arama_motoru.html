@@ -187,6 +187,16 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         }
         
+        /* Kullanıcı mesajı için özel stil */
+        .result-card.user-message .result-header {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+        }
+        
+        /* AI mesajı için mevcut stil */
+        .result-card.ai-message .result-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        }
+        
         .result-header {
             background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
             color: white;
@@ -667,6 +677,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+    let currentSessionId = null; // Mevcut sohbet oturumu ID'si
+    
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('arama-formu');
         const input = document.getElementById('sorgu-input');
@@ -680,9 +692,14 @@
             const sorgu = input.value.trim();
             if (!sorgu) return;
             
-            // Yükleniyor göster, sonuçları temizle
+            // Kullanıcı mesajını hemen göster
+            addUserMessage(sorgu);
+            
+            // Input'u temizle
+            input.value = '';
+            
+            // Yükleniyor göster
             loadingSpinner.style.display = 'block';
-            resultsDiv.innerHTML = '';
             submitBtn.disabled = true;
             
             // AJAX isteği gönder
@@ -693,7 +710,11 @@
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRFToken': getCookie('csrftoken')
                 },
-                body: JSON.stringify({sorgu: sorgu})
+                body: JSON.stringify({
+                    sorgu: sorgu,
+                    oturum_id: currentSessionId,
+                    yeni_sohbet: false
+                })
             })
             .then(response => {
                 if (!response.ok) {
@@ -707,60 +728,96 @@
                 loadingSpinner.style.display = 'none';
                 submitBtn.disabled = false;
                 
-                if (data.error) {
-                    resultsDiv.innerHTML = `
-                        <div class="result-card fade-in-up">
-                            <div class="result-header bg-danger">
-                                <i class="fas fa-exclamation-circle"></i>
-                                <span>Hata</span>
-                            </div>
-                            <div class="result-body">
-                                <div class="cevap-container">${data.error}</div>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    let cachedBadge = data.cached ? '<span class="badge bg-light text-primary ms-2">Önbellekten</span>' : '';
-                    
-                    resultsDiv.innerHTML = `
-                        <div class="result-card fade-in-up">
-                            <div class="result-header">
-                                <i class="fas fa-question-circle"></i>
-                                <span>Soru: "${data.sorgu}"</span>
-                                ${cachedBadge}
-                            </div>
-                            <div class="result-body">
-                                <div class="cevap-container">${data.cevap}</div>
-                            </div>
-                            <div class="result-footer">
-                                <i class="fas fa-info-circle"></i>
-                                Şeyma'nın bilgi ve tecrübesiyle cevaplanmıştır
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Sonuçları gösterdikten sonra sayfayı kaydır
-                    setTimeout(() => {
-                        resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 300);
+                // Oturum ID'sini kaydet
+                if (data.oturum_id) {
+                    currentSessionId = data.oturum_id;
                 }
+                
+                if (data.error) {
+                    addErrorMessage(data.error);
+                } else {
+                    addAIMessage(data.cevap);
+                }
+                
+                // Input'a tekrar odaklan
+                input.focus();
             })
             .catch(error => {
                 loadingSpinner.style.display = 'none';
                 submitBtn.disabled = false;
-                resultsDiv.innerHTML = `
-                    <div class="result-card fade-in-up">
-                        <div class="result-header bg-danger">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span>Hata</span>
-                        </div>
-                        <div class="result-body">
-                            <div class="cevap-container">${error.message}</div>
-                        </div>
-                    </div>
-                `;
+                addErrorMessage(error.message);
+                input.focus();
             });
         });
+        
+        // Kullanıcı mesajı ekle
+        function addUserMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'result-card fade-in-up user-message';
+            messageDiv.innerHTML = `
+                <div class="result-header bg-primary">
+                    <i class="fas fa-user"></i>
+                    <span>Sen</span>
+                </div>
+                <div class="result-body">
+                    <div class="cevap-container">${escapeHtml(message)}</div>
+                </div>
+            `;
+            resultsDiv.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        // AI mesajı ekle
+        function addAIMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'result-card fade-in-up ai-message';
+            messageDiv.innerHTML = `
+                <div class="result-header">
+                    <i class="fas fa-robot"></i>
+                    <span>Şeyma</span>
+                </div>
+                <div class="result-body">
+                    <div class="cevap-container">${message}</div>
+                </div>
+                <div class="result-footer">
+                    <i class="fas fa-info-circle"></i>
+                    Şeyma'nın bilgi ve tecrübesiyle cevaplanmıştır
+                </div>
+            `;
+            resultsDiv.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        // Hata mesajı ekle
+        function addErrorMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'result-card fade-in-up';
+            messageDiv.innerHTML = `
+                <div class="result-header bg-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Hata</span>
+                </div>
+                <div class="result-body">
+                    <div class="cevap-container">${escapeHtml(message)}</div>
+                </div>
+            `;
+            resultsDiv.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        // Sayfayı en alta kaydır
+        function scrollToBottom() {
+            setTimeout(() => {
+                resultsDiv.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 100);
+        }
+        
+        // HTML escape
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
         
         // Örnek sorulara tıklanınca arama yapma
         document.querySelectorAll('.example-question').forEach(badge => {

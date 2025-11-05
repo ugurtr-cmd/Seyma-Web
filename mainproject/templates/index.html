@@ -427,6 +427,54 @@
         margin: 0 auto;
     }
     
+    /* Stats Cards */
+    .stats-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .stats-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4e73df 0%, #3a56c4 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin: 0 auto 1rem;
+        box-shadow: 0 5px 15px rgba(78, 115, 223, 0.3);
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-label {
+        color: #718096;
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+    
+    .live-time {
+        font-family: 'Courier New', monospace;
+        color: #4e73df;
+    }
+    
     /* Responsive */
     @media (max-width: 768px) {
         .hero-title {
@@ -460,6 +508,10 @@
         
         .stat-number {
             font-size: 2.8rem;
+        }
+        
+        .stats-card {
+            margin-bottom: 1rem;
         }
         
         .faq-section {
@@ -564,6 +616,44 @@
                     <h5 class="card-title mb-3">Günün Sözü</h5>
                     <p class="quote-text">"{{ rastgele_soz }}"</p>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Son Aktiviteler Widget -->
+<div class="container mt-4">
+    <div class="row">
+        <!-- Site İstatistikleri -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="stats-card fade-in-up">
+                <div class="stats-icon">
+                    <i class="fas fa-blog"></i>
+                </div>
+                <h3 class="stats-number">{{ number }}</h3>
+                <p class="stats-label">Blog Yazısı</p>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="stats-card fade-in-up" style="animation-delay: 0.1s;">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <i class="fas fa-quote-left"></i>
+                </div>
+                <h3 class="stats-number">{{ toplam_alinti|default:"0" }}</h3>
+                <p class="stats-label">İlham Verici Alıntı</p>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="stats-card fade-in-up" style="animation-delay: 0.2s;">
+                <div class="stats-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3 class="stats-number">
+                    <span class="live-time">00:00</span>
+                </h3>
+                <p class="stats-label">Şu An</p>
             </div>
         </div>
     </div>
@@ -843,6 +933,22 @@ document.addEventListener('DOMContentLoaded', function() {
         element.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
         observer.observe(element);
     });
+    
+    // Live time display
+    function updateLiveTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timeElement = document.querySelector('.live-time');
+        if (timeElement) {
+            timeElement.textContent = `${hours}:${minutes}:${seconds}`;
+        }
+    }
+    
+    // Update time immediately and every second
+    updateLiveTime();
+    setInterval(updateLiveTime, 1000);
 });
 </script>
 {% endblock %}

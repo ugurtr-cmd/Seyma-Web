@@ -11,9 +11,9 @@ import time
 import datetime
 from datetime import timedelta
 from io import BytesIO
+from PIL import Image
 
 import requests
-import google.generativeai as genai
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -1417,109 +1417,164 @@ def arama_motoru(request):
         if request.content_type == 'application/json':
             data = json.loads(request.body)
             sorgu = data.get('sorgu', '')
+            oturum_id = data.get('oturum_id', None)
+            yeni_sohbet = data.get('yeni_sohbet', False)
         else:
             sorgu = request.POST.get('sorgu', '')
+            oturum_id = request.POST.get('oturum_id', None)
+            yeni_sohbet = request.POST.get('yeni_sohbet', False)
         
         if not sorgu or len(sorgu.strip()) == 0:
             return JsonResponse({'error': 'Sorgu boş olamaz'}, status=400)
         
-        # Önbellek anahtarı oluştur
-        cache_key = f"gemini_{hash(sorgu)}"
-        cached_response = cache.get(cache_key)
+        # Sohbet oturumunu al veya oluştur
+        from mainproject.models import KonusmaOturumu, KonusmaMesaji
         
-        if cached_response:
-            return JsonResponse({
-                'cevap': cached_response,
-                'sorgu': sorgu,
-                'cached': True
-            })
+        if yeni_sohbet or not oturum_id:
+            # Yeni oturum oluştur
+            oturum = KonusmaOturumu.objects.create(
+                kullanici=request.user,
+                baslik=sorgu[:100]  # İlk soruyu başlık yap
+            )
+        else:
+            # Mevcut oturumu al
+            try:
+                oturum = KonusmaOturumu.objects.get(id=oturum_id, kullanici=request.user)
+            except KonusmaOturumu.DoesNotExist:
+                # Oturum bulunamazsa yeni oluştur
+                oturum = KonusmaOturumu.objects.create(
+                    kullanici=request.user,
+                    baslik=sorgu[:100]
+                )
         
-        # Gemini API isteği
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'X-goog-api-key': settings.GEMINI_API_KEY
-        }
-        
-        # Daha iyi formatlanmış yanıt almak için prompt'u optimize et
-# Daha iyi formatlanmış yanıt almak için prompt'u optimize et
-        prompt = (
-            f"Şeyma adında birine cevap verir gibi yanıtla. Karşındaki kişi bir kuran öğretmeni ve hafız. İsmi Şeyma çok zeki, çok güzel, çok değerli"
-            f"Seninle konuşan ve konuştuğun karşındaki kişi olan Şeyma, Amine Hatun Kuran Kursunda Hafızlık Hazırlık Öğretmeni"
-            f"Kullanıcının sorusu: {sorgu}. "
-            f"Cevabın samimi, dostane ve bilgilendirici olsun. "
-            f"Lütfen yanıtını aşağıdaki kurallara göre formatla:\n"
-            f"1. Başlıklar için **kalın** kullan\n"
-            f"2. Maddeler için * işareti kullan\n"
-            f"3. Her maddeyi yeni satırda başlat\n"
-            f"4. Paragraflar arasında boşluk bırak\n"
-            f"6. HTML etiketi kullanma, sadece * ve ** işaretleri kullan."
+        # Kullanıcı mesajını kaydet
+        KonusmaMesaji.objects.create(
+            oturum=oturum,
+            tip='USER',
+            icerik=sorgu
         )
-
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": prompt  # Buradaki "prompt" artık tek bir metin dizesi olacak
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.7,
-                "topK": 40,
-                "topP": 0.95,
-                "maxOutputTokens": 1024,
-            }
-        }
         
+        # Önceki konuşma geçmişini al (son 10 mesaj)
+        onceki_mesajlar = oturum.mesajlar.order_by('-zaman')[:10][::-1]  # Ters çevir
+        
+        # Gemini API isteği için contents dizisi oluştur
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            response.raise_for_status()
+            api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
             
-            result = response.json()
+            headers = {
+                'Content-Type': 'application/json',
+            }
             
-            # Yanıtı çıkar
-            if (result.get('candidates') and 
-                len(result['candidates']) > 0 and 
-                result['candidates'][0].get('content') and
-                result['candidates'][0]['content'].get('parts') and
-                len(result['candidates'][0]['content']['parts']) > 0):
+            # Sistem prompt'u
+            sistem_prompt = (
+                "Konuştuğun kişi  Şeyma adında bir Kuran öğretmeni ve hafız "
+                "Amine Hatun Kuran Kursu'nda Hafızlık Hazırlık Öğretmenisi. "
+                "Çok zeki, çok güzel, çok değerli bir öğretmen. "
+                "Samimi, dostane ve bilgilendirici cevaplar veriyorsun. "
+                "Konuşma geçmişini hatırlıyor ve bağlam içinde cevap veriyorsun."
+            )
+            
+            # Konuşma geçmişini Gemini formatında hazırla
+            contents = []
+            
+            # Sistem talimatını her zaman ilk mesaj olarak ekle
+            contents.append({
+                "role": "user",
+                "parts": [{"text": sistem_prompt}]
+            })
+            contents.append({
+                "role": "model",
+                "parts": [{"text": "Anladım, ben Şeyma'yım. Size nasıl yardımcı olabilirim?"}]
+            })
+            
+            # Önceki mesajları ekle
+            if onceki_mesajlar:
+                for mesaj in onceki_mesajlar[:-1]:  # Son mesaj hariç (şu anki sorgu)
+                    if mesaj.tip == 'USER':
+                        contents.append({
+                            "role": "user",
+                            "parts": [{"text": mesaj.icerik}]
+                        })
+                    else:  # AI
+                        contents.append({
+                            "role": "model",
+                            "parts": [{"text": mesaj.icerik}]
+                        })
+            
+            # Mevcut soruyu ekle
+            contents.append({
+                "role": "user",
+                "parts": [{"text": sorgu}]
+            })
+            
+            payload = {
+                "contents": contents,
+                "generationConfig": {
+                    "temperature": 0.8,
+                    "topK": 40,
+                    "topP": 0.95,
+                    "maxOutputTokens": 8192,
+                }
+            }
+            
+            # API anahtarını URL'ye ekle
+            response = requests.post(
+                f"{api_url}?key={settings.GEMINI_API_KEY}",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
                 
-                cevap = result['candidates'][0]['content']['parts'][0]['text']
+                # Yanıtın kesilip kesilmediğini kontrol et
+                if 'candidates' not in data or not data['candidates']:
+                    return JsonResponse({
+                        'error': 'API yanıt vermedi. Lütfen tekrar deneyin.'
+                    }, status=500)
+                
+                candidate = data['candidates'][0]
+                
+                # Finish reason kontrolü
+                finish_reason = candidate.get('finishReason', '')
+                if finish_reason == 'MAX_TOKENS':
+                    # Token sınırına ulaşıldı, uyarı ekle
+                    cevap = candidate['content']['parts'][0]['text']
+                    cevap += "\n\n*[Not: Yanıt çok uzun olduğu için kesildi. Daha spesifik sorular sorabilirsiniz.]*"
+                elif finish_reason and finish_reason != 'STOP':
+                    # Diğer kesinti nedenleri
+                    return JsonResponse({
+                        'error': f'Yanıt oluşturulamadı: {finish_reason}'
+                    }, status=500)
+                else:
+                    cevap = candidate['content']['parts'][0]['text']
+                
+                # AI cevabını kaydet
+                KonusmaMesaji.objects.create(
+                    oturum=oturum,
+                    tip='AI',
+                    icerik=cevap
+                )
                 
                 # Metni formatla
                 formatted_cevap = format_gemini_response(cevap)
                 
-                # Önbelleğe al (1 saat)
-                cache.set(cache_key, formatted_cevap, 3600)
-                
                 return JsonResponse({
                     'cevap': formatted_cevap,
                     'sorgu': sorgu,
+                    'oturum_id': oturum.id,
                     'success': True
                 })
             else:
                 return JsonResponse({
-                    'error': 'API yanıt formatı beklenen şekilde değil'
+                    'error': f'API Hatası: {response.status_code}'
                 }, status=500)
                 
-        except requests.exceptions.HTTPError as e:
-            error_msg = f"HTTP hatası: {str(e)}"
-            if hasattr(e, 'response') and e.response.status_code == 429:
-                error_msg = "Şu anda çok fazla istek yapıldı. Lütfen bir süre sonra tekrar deneyin."
-            return JsonResponse({'error': error_msg}, status=500)
-            
-        except requests.exceptions.Timeout:
-            return JsonResponse({'error': 'İstek zaman aşımına uğradı. Lütfen tekrar deneyin.'}, status=408)
-            
-        except requests.exceptions.ConnectionError:
-            return JsonResponse({'error': 'İnternet bağlantı hatası. Lütfen bağlantınızı kontrol edin.'}, status=503)
-            
         except Exception as e:
-            return JsonResponse({'error': f'Beklenmeyen bir hata oluştu: {str(e)}'}, status=500)
+            return JsonResponse({
+                'error': str(e)
+            }, status=500)
     
     # GET isteği için HTML sayfasını göster
     return render(request, 'arama_motoru.html')
@@ -1638,11 +1693,19 @@ def home(request):
     "Susmak bazen en gür sestir."
     ]
     rastgele_soz = random.choice(sozler)
+    
+    # İstatistikler için veriler
+    toplam_alinti = Alinti.objects.filter(isActive=True).count()
+    # Görüntülenme sayısı için şimdilik varsayılan değer (ileride view tracking eklenebilir)
+    toplam_goruntulenme = 0  # Bu özellik ileride eklenecek
+    
     return render(request, 'index.html', {
         'son_yazilar': son_yazilar,
         'rastgele_soz': rastgele_soz,
         'anasayfa_alt_metin': anasayfa_alt_metin,
-        'number':number
+        'number': number,
+        'toplam_alinti': toplam_alinti,
+        'toplam_goruntulenme': toplam_goruntulenme
     })
 def about(request):
     hakkimda = SiteContent.objects.filter(slug='hakkimda').first()
@@ -1713,9 +1776,10 @@ def yazi_guncelle(request, id):
         isActive = request.POST.get('aktif')
         yazim.isActive = (isActive == "True")  # "True" string'i ile karşılaştır
         
-        # Resim güncelleme
+        # Resim güncelleme - optimize edilmiş olarak kaydet
         if 'image' in request.FILES:
-            yazim.imageUrl = request.FILES['image']
+            new_image = request.FILES['image']
+            yazim.imageUrl = optimize_image(new_image, max_width=1200, quality=85)
             
         yazim.save()
         return redirect('admin-yazi-listesi')
@@ -1747,13 +1811,14 @@ def alinti_yaz(request):
             return render(request, 'alinti_yaz.html')
 
         try:
-            Alinti.objects.create(
+            yeni_alinti = Alinti.objects.create(
                 quote_text=quote_text,
                 author=author,
                 source=source,
                 category=category,
                 isActive=isActive
             )
+            
             messages.success(request, 'Alıntı başarıyla eklendi.')
             return redirect('alinti-listesi')
         except Exception as e:
@@ -1956,6 +2021,10 @@ def admin_dashboard(request):
     # Son 7 günün mesajları
     gecmis_mesajlar = GunlukMesaj.gecmis_mesajlar(7)
     
+    # Akıllı bildirimler - son 10 adet
+    from .models import AkilliBildirim
+    bildirimler = AkilliBildirim.objects.all()[:10]
+    
     context = {
         'toplam_yazi': toplam_yazi,
         'toplam_ogrenci': toplam_ogrenci,
@@ -1974,9 +2043,81 @@ def admin_dashboard(request):
         # Günlük mesaj sistemi
         'gunluk_mesaj': gunluk_mesaj,
         'gecmis_mesajlar': gecmis_mesajlar,
+        # Akıllı bildirimler
+        'bildirimler': bildirimler,
     }
     
     return render(request, 'admin_dashboard.html', context)
+
+
+def optimize_image(image_file, max_width=1200, quality=85):
+    """
+    Resmi optimize eder - boyutunu küçültür ve kalitesini ayarlar
+    
+    Args:
+        image_file: UploadedFile objesi
+        max_width: Maksimum genişlik (px)
+        quality: JPEG kalitesi (1-100 arası, 85 önerilen)
+    
+    Returns:
+        InMemoryUploadedFile: Optimize edilmiş resim
+    """
+    try:
+        # Resmi aç
+        img = Image.open(image_file)
+        
+        # EXIF verilerini koru (döndürme bilgisi için)
+        try:
+            from PIL import ImageOps
+            img = ImageOps.exif_transpose(img)
+        except:
+            pass
+        
+        # RGB'ye çevir (RGBA, P modları için)
+        if img.mode in ('RGBA', 'LA', 'P'):
+            # Şeffaflık varsa beyaz arka plan ekle
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Boyut kontrolü - genişlik max_width'den büyükse küçült
+        if img.width > max_width:
+            # Oranı koru
+            ratio = max_width / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+        
+        # BytesIO buffer'a kaydet
+        output = BytesIO()
+        img.save(output, format='JPEG', quality=85, optimize=True)
+        output.seek(0)
+        
+        # Yeni dosya adı (.jpg uzantılı)
+        original_name = image_file.name
+        name_without_ext = os.path.splitext(original_name)[0]
+        new_name = f"{name_without_ext}.jpg"
+        
+        # InMemoryUploadedFile oluştur
+        optimized_file = InMemoryUploadedFile(
+            output,
+            'ImageField',
+            new_name,
+            'image/jpeg',
+            output.getbuffer().nbytes,
+            None
+        )
+        
+        return optimized_file
+        
+    except Exception as e:
+        # Hata olursa orijinal dosyayı döndür
+        print(f"Resim optimizasyon hatası: {e}")
+        image_file.seek(0)
+        return image_file
 
 
 @login_required(login_url='login')
@@ -2021,7 +2162,17 @@ def yaziyaz(request):
                     'kategoriler':kategoriler,}
                   )
 
-        yazilar = yazi(title=title, description=description, imageUrl=imageUrl, isActive=isActive)
+        # Resim yüklenmişse optimize et
+        if imageUrl:
+            imageUrl = optimize_image(imageUrl, max_width=1200, quality=85)
+
+        yazilar = yazi(
+            title=title, 
+            description=description, 
+            imageUrl=imageUrl, 
+            isActive=isActive,
+            date=timezone.now().date()  # Bugünün tarihi
+        )
         yazilar.save()
         
         return redirect('/blog')
@@ -2034,21 +2185,23 @@ def login(request):
     if request.user.is_authenticated:
         return redirect('home')
     
-    if request.method=="POST":
-        form = AuthenticationForm(request, data=request.POST)
-
-        username = request.POST["username"]
-        password = request.POST["password"]
+    if request.method == "POST":
+        username = request.POST.get("username", "")
+        password = request.POST.get("password", "")
 
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
             login_auth(request, user)
-            messages.add_message(request,messages.SUCCESS,"Giriş Başarılı")
-            return redirect('home')
+            messages.add_message(request, messages.SUCCESS, "Giriş Başarılı")
+            
+            # Kullanıcıyı istediği sayfaya veya home'a yönlendir
+            next_url = request.GET.get('next', 'home')
+            return redirect(next_url)
         else:
-            messages.add_message(request,messages.WARNING,"Kullanıcı ismi veya parola hatalı")
+            messages.add_message(request, messages.WARNING, "Kullanıcı adı veya şifre hatalı")
             return render(request, 'giris.html')
+    
     return render(request, 'giris.html')
 
 from django.core.mail import send_mail
@@ -2114,9 +2267,9 @@ def change_password(request):
     return render(request, 'parola_guncelle.html', {'form': form})
 
 def user_logout(request):
-    messages.add_message(request,messages.SUCCESS,"Çıkış Yapıldı")
     logout(request)
-    return render(request,'index.html')
+    messages.add_message(request, messages.SUCCESS, "Başarıyla çıkış yaptınız")
+    return redirect('home')
 
 
 from mainproject.models import Ogrenci, EzberKaydi
@@ -2308,6 +2461,168 @@ def ogrenci_duzenle(request, id):
     
     return render(request, 'ogrenci_duzenle.html', context)
 
+
+@login_required(login_url='login')
+@csrf_exempt
+def toplu_elifba_durum_degistir(request, id):
+    """Elif-Ba ezberlerinin durumunu toplu olarak değiştirir ve kaydeder"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Sadece POST isteği kabul edilir'}, status=400)
+    
+    try:
+        ogrenci = get_object_or_404(Ogrenci, id=id)
+        
+        # JSON verisi al
+        data = json.loads(request.body)
+        ezber_idleri = data.get('ezber_ids', [])
+        yeni_durum = data.get('durum', '')
+        
+        if not ezber_idleri:
+            return JsonResponse({'error': 'Hiç ezber seçilmedi'}, status=400)
+        
+        if yeni_durum not in ['BASLAMADI', 'DEVAM', 'TAMAMLANDI']:
+            return JsonResponse({'error': 'Geçersiz durum'}, status=400)
+        
+        bugun = timezone.now().date()
+        guncellenen_sayisi = 0
+        
+        # Her seçilen ezber için durum güncelle
+        for ezber_id in ezber_idleri:
+            try:
+                ezber = ElifBaEzberi.objects.get(id=ezber_id)
+                
+                # Ezber durumunu al veya oluştur
+                ezber_durumu, created = ElifBaEzberDurumu.objects.get_or_create(
+                    ogrenci=ogrenci,
+                    ezber=ezber,
+                    defaults={'durum': yeni_durum}
+                )
+                
+                # Durumu güncelle
+                ezber_durumu.durum = yeni_durum
+                
+                # Tarihleri güncelle
+                if yeni_durum == 'DEVAM':
+                    if not ezber_durumu.baslama_tarihi:
+                        ezber_durumu.baslama_tarihi = bugun
+                    ezber_durumu.bitis_tarihi = None
+                    ezber_durumu.tamamlandi_tarihi = None
+                    
+                elif yeni_durum == 'TAMAMLANDI':
+                    if not ezber_durumu.baslama_tarihi:
+                        ezber_durumu.baslama_tarihi = bugun
+                    if not ezber_durumu.bitis_tarihi:
+                        ezber_durumu.bitis_tarihi = bugun
+                    ezber_durumu.tamamlandi_tarihi = bugun
+                    
+                elif yeni_durum == 'BASLAMADI':
+                    ezber_durumu.baslama_tarihi = None
+                    ezber_durumu.bitis_tarihi = None
+                    ezber_durumu.tamamlandi_tarihi = None
+                
+                ezber_durumu.save()
+                guncellenen_sayisi += 1
+                
+            except ElifBaEzberi.DoesNotExist:
+                continue
+        
+        durum_adi = {
+            'TAMAMLANDI': 'Tamamlandı',
+            'DEVAM': 'Devam Ediyor',
+            'BASLAMADI': 'Başlamadı'
+        }[yeni_durum]
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{guncellenen_sayisi} ezber "{durum_adi}" olarak kaydedildi.',
+            'guncellenen_sayisi': guncellenen_sayisi
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required(login_url='login')
+def toplu_ezber_durum_degistir(request, id):
+    """Ezber sürelerinin durumunu toplu olarak değiştirir ve kaydeder"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Sadece POST isteği kabul edilir'}, status=400)
+    
+    try:
+        ogrenci = get_object_or_404(Ogrenci, id=id)
+        
+        # JSON verisi al
+        data = json.loads(request.body)
+        ezber_idleri = data.get('ezber_ids', [])
+        yeni_durum = data.get('durum', '')
+        
+        if not ezber_idleri:
+            return JsonResponse({'error': 'Hiç ezber seçilmedi'}, status=400)
+        
+        if yeni_durum not in ['BASLAMADI', 'DEVAM', 'TAMAMLANDI']:
+            return JsonResponse({'error': 'Geçersiz durum'}, status=400)
+        
+        bugun = timezone.now().date()
+        guncellenen_sayisi = 0
+        
+        # Her seçilen ezber için durum güncelle
+        for sure_id in ezber_idleri:
+            try:
+                # EzberSuresi'ni bul
+                sure = EzberSuresi.objects.get(id=sure_id)
+                
+                # Öğrencinin bu süre için kaydını bul veya oluştur
+                ezber_kaydi, created = EzberKaydi.objects.get_or_create(
+                    ogrenci=ogrenci,
+                    sure=sure,
+                    defaults={'ilerleme': 0, 'durum': 'BASLAMADI'}
+                )
+                
+                # Duruma göre tarihleri ve ilerlemeyi güncelle
+                if yeni_durum == 'DEVAM':
+                    ezber_kaydi.durum = 'DEVAM'
+                    if not ezber_kaydi.baslama_tarihi:
+                        ezber_kaydi.baslama_tarihi = bugun
+                    ezber_kaydi.bitis_tarihi = None
+                    # İlerleme 0 ise başlamış olarak %10 yap
+                    if ezber_kaydi.ilerleme == 0:
+                        ezber_kaydi.ilerleme = 10
+                    
+                elif yeni_durum == 'TAMAMLANDI':
+                    ezber_kaydi.durum = 'TAMAMLANDI'
+                    if not ezber_kaydi.baslama_tarihi:
+                        ezber_kaydi.baslama_tarihi = bugun
+                    ezber_kaydi.bitis_tarihi = bugun
+                    ezber_kaydi.ilerleme = 100
+                    
+                elif yeni_durum == 'BASLAMADI':
+                    ezber_kaydi.durum = 'BASLAMADI'
+                    ezber_kaydi.baslama_tarihi = None
+                    ezber_kaydi.bitis_tarihi = None
+                    ezber_kaydi.ilerleme = 0
+                
+                ezber_kaydi.save()
+                guncellenen_sayisi += 1
+                
+            except EzberSuresi.DoesNotExist:
+                continue
+        
+        durum_adi = {
+            'TAMAMLANDI': 'Tamamlandı',
+            'DEVAM': 'Devam Ediyor',
+            'BASLAMADI': 'Başlamadı'
+        }[yeni_durum]
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{guncellenen_sayisi} ezber "{durum_adi}" olarak kaydedildi.',
+            'guncellenen_sayisi': guncellenen_sayisi
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 @login_required(login_url='login')
 def ders_notu_ekle(request, id):
     ogrenci = get_object_or_404(Ogrenci, id=id)
@@ -2461,15 +2776,15 @@ def gemini_ogrenci_analizi(veri):
         return cached_response
     
     # Gemini API isteği
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+    try:
+        api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
+        
+        headers = {
+            'Content-Type': 'application/json',
+        }
     
-    headers = {
-        'Content-Type': 'application/json',
-        'X-goog-api-key': settings.GEMINI_API_KEY
-    }
-    
-    # Düzeltilmiş ve detaylı prompt
-    prompt = f"""
+        # Düzeltilmiş ve detaylı prompt
+        prompt = f"""
     Şeyma adında bir Kuran öğretmeni ve hafız olarak öğrenci analizi yapmanı istiyorum. 
     Amine Hatun Kuran Kursu'nda Hafızlık Hazırlık Öğretmenisin.
     
@@ -2568,39 +2883,24 @@ def gemini_ogrenci_analizi(veri):
     Motive edici ifadeler, genel geçer tavsiyeler veya klişeler KULLANMA.
     ELİF BA EZBERLERİNİ MUTLAKA DAHİL ET VE DETAYLI ANALİZ ET.
     """
-    
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "text": prompt
-                    }
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.3,
-            "topK": 20,
-            "topP": 0.8,
-            "maxOutputTokens": 4096,
+        
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }]
         }
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=45)
-        response.raise_for_status()
         
-        result = response.json()
+        # API anahtarını URL'ye ekle
+        response = requests.post(
+            f"{api_url}?key={settings.GEMINI_API_KEY}",
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
         
-        # Yanıtı çıkar
-        if (result.get('candidates') and 
-            len(result['candidates']) > 0 and 
-            result['candidates'][0].get('content') and
-            result['candidates'][0]['content'].get('parts') and
-            len(result['candidates'][0]['content']['parts']) > 0):
-            
-            cevap = result['candidates'][0]['content']['parts'][0]['text']
+        if response.status_code == 200:
+            data = response.json()
+            cevap = data['candidates'][0]['content']['parts'][0]['text']
             
             # Metni formatla
             formatted_cevap = format_gemini_response(cevap)
@@ -2610,20 +2910,10 @@ def gemini_ogrenci_analizi(veri):
             
             return formatted_cevap
         else:
-            return "**🤖 Analiz Hatası**\n\nÖğrenci analizi şu anda yapılamıyor. Lütfen daha sonra tekrar deneyin."
-            
-    except requests.exceptions.HTTPError as e:
-        error_msg = f"HTTP hatası: {str(e)}"
-        return f"**🤖 Teknik Sorun**\n\nAnaliz sırasında bir hata oluştu: {error_msg}"
-        
-    except requests.exceptions.Timeout:
-        return "**⏰ Zaman Aşımı**\n\nAnaliz için zaman aşımı oluştu. Lütfen daha sonra tekrar deneyin."
-        
-    except requests.exceptions.ConnectionError:
-        return "**🌐 Bağlantı Hatası**\n\nİnternet bağlantısı gerekiyor. Lütfen bağlantınızı kontrol edin."
+            return f"**❌ Analiz Hatası**\n\nAPI Hatası: {response.status_code}"
         
     except Exception as e:
-        return f"**❌ Beklenmeyen Hata**\n\nBir sorun oluştu: {str(e)}"
+        return f"**❌ Analiz Hatası**\n\nBir sorun oluştu: {str(e)}"
 
 
 @login_required(login_url='login')
@@ -3193,12 +3483,36 @@ def gunluk_mesaj_olustur():
         Lütfen doğal, samimi ve Şeyma'nın ruhunu okşayacak bir mesaj yaz.
         """
         
-        # Gemini AI çağrısı
-        genai.configure(api_key=settings.GOOGLE_AI_API_KEY)
-        model = genai.GenerativeModel('gemini-pro')
+        # Gemini API isteği
+        api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
         
-        response = model.generate_content(prompt)
-        mesaj_metni = response.text
+        headers = {
+            'Content-Type': 'application/json',
+        }
+        
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }]
+        }
+        
+        response = requests.post(
+            f"{api_url}?key={settings.GOOGLE_AI_API_KEY}",
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            mesaj_metni = data['candidates'][0]['content']['parts'][0]['text']
+        else:
+            # Hata durumunda varsayılan mesaj kullan
+            mesaj_metni = random.choice([
+                f"🌸 Günaydın Şeyma! Bugün {gun_adi}, yeni bir gün yeni fırsatlar demek. {toplam_ogrenci} öğrencin senin rehberliğinde Kur'an'ı öğrenmeye devam ediyor. Bu ne büyük bir bereket!",
+                f"💝 Sevgili Şeyma, bugün {toplam_tamamlanan_ezber} tamamlanmış ezber ve {toplam_tamamlanan_elifba} bitmiş Elif Ba ile ne kadar başarılı bir yolculuk! Sen sadece öğretmen değil, bir gönül mimarısın.",
+                f"🌟 {gun_adi} günün mübarek olsun Şeyma! {bu_ay_yeni_ogrenci} yeni öğrenci bu ay ailemize katıldı. Her yeni gelen çocuk, senin etkili öğretmenliğinin bir göstergesi.",
+            ])
         
         # Mesajı veritabanına kaydet
         gunluk_mesaj = GunlukMesaj.objects.create(
@@ -3331,3 +3645,31 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', () => {});
 """
         return HttpResponse(fallback_sw, content_type='application/javascript')
+
+
+
+# ============================================
+# Ak�ll� Bildirimler API
+# ============================================
+
+@login_required
+@require_POST
+def bildirim_okundu(request, bildirim_id):
+    try:
+        from .models import AkilliBildirim
+        bildirim = get_object_or_404(AkilliBildirim, id=bildirim_id)
+        bildirim.okundu_olarak_isaretle()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_POST
+def yeni_gunluk_bildirim(request):
+    try:
+        from . import gemini_service
+        bildirim = gemini_service.gunluk_motivasyon_olustur()
+        return JsonResponse({'success': True, 'baslik': bildirim.baslik, 'mesaj': bildirim.mesaj})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

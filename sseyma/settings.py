@@ -137,8 +137,6 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-GEMINI_API_KEY = 'AIzaSyBtAckAUm61L4eNjlnWaeLIcoGiK4BbKtE'
-
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -174,3 +172,7 @@ EMAIL_HOST_PASSWORD = 'qiakrilwxnueksos'
 DEFAULT_FROM_EMAIL = 'seymailetisim@yandex.com'
 CONTACT_EMAIL = 'ugurkezertr@gmail.com'  # Mesajların gideceği adres
 SITE_NAME = "seymaa.com"
+
+# Gemini AI API Key
+GEMINI_API_KEY = 'AIzaSyBNMzmmSmGMNUfrBBq4Dngy6ASbvZe-Z30'
+GOOGLE_AI_API_KEY = GEMINI_API_KEY  # Alias for compatibility

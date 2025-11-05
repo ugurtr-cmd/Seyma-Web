@@ -345,3 +345,76 @@ class BildirimGecmisi(models.Model):
     
     def __str__(self):
         return f"{self.get_tip_display()} - {self.baslik[:50]}..."
+
+
+class KonusmaOturumu(models.Model):
+    """Kullanıcıların Şeyma'ya Sor ile yaptığı sohbet oturumları"""
+    kullanici = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='konusma_oturumlari')
+    baslik = models.CharField(max_length=200, blank=True)  # İlk sorudan otomatik oluşturulacak
+    baslama_zamani = models.DateTimeField(auto_now_add=True)
+    son_mesaj_zamani = models.DateTimeField(auto_now=True)
+    aktif = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = "Konuşma Oturumu"
+        verbose_name_plural = "Konuşma Oturumları"
+        ordering = ['-son_mesaj_zamani']
+    
+    def __str__(self):
+        return f"{self.kullanici.username} - {self.baslik[:50] if self.baslik else 'Yeni Sohbet'}"
+    
+    def mesaj_sayisi(self):
+        return self.mesajlar.count()
+
+
+class KonusmaMesaji(models.Model):
+    """Sohbet geçmişindeki her bir mesaj"""
+    MESAJ_TIPI = [
+        ('USER', 'Kullanıcı'),
+        ('AI', 'Şeyma (AI)'),
+    ]
+    
+    oturum = models.ForeignKey(KonusmaOturumu, on_delete=models.CASCADE, related_name='mesajlar')
+    tip = models.CharField(max_length=4, choices=MESAJ_TIPI)
+    icerik = models.TextField()
+    zaman = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Konuşma Mesajı"
+        verbose_name_plural = "Konuşma Mesajları"
+        ordering = ['zaman']
+    
+    def __str__(self):
+        return f"{self.get_tip_display()} - {self.icerik[:30]}..."
+
+
+class AkilliBildirim(models.Model):
+    """Gemini AI tarafından oluşturulan kişiselleştirilmiş bildirimler"""
+    BILDIRIM_TURU = [
+        ('GUNLUK', 'Günlük Motivasyon'),
+        ('YAZI', 'Yazı Analizi'),
+        ('ALINTI', 'Alıntı Yorumu'),
+        ('OGRENCI', 'Öğrenci Raporu'),
+        ('EZBER', 'Ezber İstatistikleri'),
+    ]
+    
+    tur = models.CharField(max_length=10, choices=BILDIRIM_TURU)
+    baslik = models.CharField(max_length=200)
+    mesaj = models.TextField()
+    olusturma_zamani = models.DateTimeField(auto_now_add=True)
+    okundu = models.BooleanField(default=False)
+    ilgili_yazi_id = models.IntegerField(null=True, blank=True)
+    ilgili_alinti_id = models.IntegerField(null=True, blank=True)
+    ilgili_ogrenci_id = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = "Akıllı Bildirim"
+        verbose_name_plural = "Akıllı Bildirimler"
+        ordering = ['-olusturma_zamani']
+    
+    def __str__(self):
+        return f"{self.get_tur_display()} - {self.baslik[:50]}"
+    
+    def okundu_olarak_isaretle(self):
+        self.okundu = True
+        self.save()
