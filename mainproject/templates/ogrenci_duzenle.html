@@ -570,6 +570,32 @@
         .sinav-actions {
             flex-direction: column;
         }
+        
+        /* Toplu İşlem Butonları - Mobil */
+        .toplu-islem-container {
+            flex-direction: column !important;
+            gap: 8px !important;
+            padding: 10px !important;
+            align-items: stretch !important;
+        }
+        
+        .toplu-islem-container button {
+            width: 100% !important;
+            font-size: 0.85rem !important;
+            padding: 8px 12px !important;
+            white-space: normal !important;
+            text-align: center !important;
+        }
+        
+        .toplu-islem-container label {
+            width: 100%;
+            text-align: center;
+            padding: 8px 0;
+        }
+        
+        .toplu-islem-container > span {
+            display: none !important;
+        }
     }
     
     @media (max-width: 480px) {
@@ -744,7 +770,7 @@
                         </button>
                         
                         <!-- Toplu İşlemler -->
-                        <div style="display: flex; gap: 10px; align-items: center; padding: 8px; background: #f8f9fc; border-radius: 8px;">
+                        <div class="toplu-islem-container" style="display: flex; gap: 10px; align-items: center; padding: 8px; background: #f8f9fc; border-radius: 8px;">
                             <label style="margin: 0; font-weight: 600; color: #5a5c69;">
                                 <input type="checkbox" id="selectAllEzber" style="margin-right: 5px;">
                                 Tümünü Seç
@@ -880,7 +906,7 @@
                         </button>
                         
                         <!-- Toplu İşlemler -->
-                        <div style="display: flex; gap: 10px; align-items: center; padding: 8px; background: #f8f9fc; border-radius: 8px;">
+                        <div class="toplu-islem-container" style="display: flex; gap: 10px; align-items: center; padding: 8px; background: #f8f9fc; border-radius: 8px;">
                             <label style="margin: 0; font-weight: 600; color: #5a5c69;">
                                 <input type="checkbox" id="selectAllElifBa" style="margin-right: 5px;">
                                 Tümünü Seç
