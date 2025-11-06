@@ -418,3 +418,53 @@ class AkilliBildirim(models.Model):
     def okundu_olarak_isaretle(self):
         self.okundu = True
         self.save()
+
+
+class Galeri(models.Model):
+    """Depolama alanına kaydedilen fotoğraflar için galeri sistemi"""
+    KATEGORI_CHOICES = [
+        ('YAZI', 'Yazı Fotoğrafı'),
+        ('MANUEL', 'Manuel Yükleme'),
+        ('OGRENCI', 'Öğrenci Profil'),
+        ('GENEL', 'Genel'),
+    ]
+    
+    baslik = models.CharField(max_length=200, help_text="Fotoğraf başlığı")
+    aciklama = models.TextField(blank=True, help_text="Fotoğraf açıklaması")
+    dosya = models.ImageField(upload_to='galeri/%Y/%m/', help_text="Fotoğraf dosyası")
+    kategori = models.CharField(max_length=10, choices=KATEGORI_CHOICES, default='GENEL')
+    yukleme_tarihi = models.DateTimeField(auto_now_add=True)
+    dosya_boyutu = models.PositiveIntegerField(null=True, blank=True, help_text="KB cinsinden boyut")
+    genislik = models.PositiveIntegerField(null=True, blank=True)
+    yukseklik = models.PositiveIntegerField(null=True, blank=True)
+    ilgili_yazi_id = models.PositiveIntegerField(null=True, blank=True, help_text="Hangi yazıya ait")
+    
+    class Meta:
+        verbose_name = "Galeri Fotoğrafı"
+        verbose_name_plural = "Galeri Fotoğrafları"
+        ordering = ['-yukleme_tarihi']
+    
+    def __str__(self):
+        return f"{self.baslik} ({self.get_kategori_display()})"
+    
+    def dosya_boyutu_mb(self):
+        """Dosya boyutunu MB olarak döndür"""
+        if self.dosya_boyutu:
+            return round(self.dosya_boyutu / 1024, 2)
+        return 0
+    
+    def save(self, *args, **kwargs):
+        """Dosya boyutunu otomatik hesapla"""
+        if self.dosya:
+            try:
+                # Dosya boyutunu KB olarak kaydet
+                self.dosya_boyutu = self.dosya.size // 1024
+                
+                # Resim boyutlarını al
+                from PIL import Image
+                image = Image.open(self.dosya)
+                self.genislik, self.yukseklik = image.size
+            except:
+                pass
+        
+        super().save(*args, **kwargs)

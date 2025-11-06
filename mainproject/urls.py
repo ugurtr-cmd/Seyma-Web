@@ -63,4 +63,9 @@ urlpatterns = [
     # Akıllı Bildirim Routes
     path('bildirim-okundu/<int:bildirim_id>/', bildirim_views.bildirim_okundu, name='bildirim_okundu'),
     path('yeni-gunluk-bildirim/', bildirim_views.yeni_gunluk_bildirim, name='yeni_gunluk_bildirim'),
+    
+    # Galeri Routes
+    path('admin-paneli/galeri/', views.galeri, name='galeri'),
+    path('admin-paneli/galeri/yukle/', views.galeri_yukle, name='galeri_yukle'),
+    path('admin-paneli/galeri/sil/<int:fotograf_id>/', views.galeri_sil, name='galeri_sil'),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -357,6 +357,9 @@
         <a href="{% url 'yeni_ogrenci' %}" class="{% if request.path == '/admin-paneli/ogrenci-ekle/' %}active{% endif %}">
           <i class="fas fa-user-plus"></i> Öğrenci Ekle
         </a>
+        <a href="{% url 'galeri' %}" class="{% if '/admin-paneli/galeri/' in request.path %}active{% endif %}">
+          <i class="fas fa-images"></i> Galeri
+        </a>
         <a href="{% url 'arama_motoru' %}" class="{% if request.path == '/admin-paneli/ai-arama/' %}active{% endif %}">
           <i class="fas fa-robot"></i> AI Arama
         </a>

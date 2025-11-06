@@ -156,6 +156,7 @@ def restore_data(request):
             
             # Verileri doğru sırayla sil
             try:
+                from .models import Galeri
                 ElifBaEzberDurumu.objects.all().delete()
                 DersNotu.objects.all().delete()
                 SinavSonucu.objects.all().delete()
@@ -167,13 +168,14 @@ def restore_data(request):
                 ElifBaEzberi.objects.all().delete()
                 EzberSuresi.objects.all().delete()
                 category.objects.all().delete()
+                Galeri.objects.all().delete()  # Galeri kayıtlarını da sil
             except Exception as e:
                 print(f"Silme hatası: {e}")
             
             update_restore_progress(60, 'Eski veriler silindi')
             
             # Verileri geri yükle - sıralı olarak
-            progress_per_model = 30 / 11  # 11 model için 30% alan
+            progress_per_model = 30 / 12  # 12 model için 30% alan (galeri dahil)
             current_progress = 60
             
             # 1. Categories
@@ -225,28 +227,35 @@ def restore_data(request):
                 current_progress += progress_per_model
                 update_restore_progress(int(current_progress), 'Alıntılar yüklendi')
             
-            # 8. Ezber Kayıtları
+            # 8. Galeri
+            if 'galeri' in backup_data:
+                for obj in serializers.deserialize('json', backup_data['galeri']):
+                    obj.save()
+                current_progress += progress_per_model
+                update_restore_progress(int(current_progress), 'Galeri yüklendi')
+            
+            # 9. Ezber Kayıtları
             if 'ezber_kayitlari' in backup_data:
                 for obj in serializers.deserialize('json', backup_data['ezber_kayitlari']):
                     obj.save()
                 current_progress += progress_per_model
                 update_restore_progress(int(current_progress), 'Ezber kayıtları yüklendi')
             
-            # 9. Sınav Sonuçları
+            # 10. Sınav Sonuçları
             if 'sinav_sonuclari' in backup_data:
                 for obj in serializers.deserialize('json', backup_data['sinav_sonuclari']):
                     obj.save()
                 current_progress += progress_per_model
                 update_restore_progress(int(current_progress), 'Sınav sonuçları yüklendi')
             
-            # 10. Ders Notları
+            # 11. Ders Notları
             if 'ders_notlari' in backup_data:
                 for obj in serializers.deserialize('json', backup_data['ders_notlari']):
                     obj.save()
                 current_progress += progress_per_model
                 update_restore_progress(int(current_progress), 'Ders notları yüklendi')
             
-            # 11. Elif Ba Ezber Durumları
+            # 12. Elif Ba Ezber Durumları
             if 'elifba_ezber_durumlari' in backup_data:
                 for obj in serializers.deserialize('json', backup_data['elifba_ezber_durumlari']):
                     obj.save()
@@ -272,17 +281,42 @@ def restore_data(request):
                         if photo_data['type'] == 'yazi':
                             dest_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
                         elif photo_data['type'] == 'ogrenci':
-                            dest_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+                            dest_dir = os.path.join(settings.MEDIA_ROOT, 'ogrenci_profil')
+                        elif photo_data['type'] == 'galeri':
+                            # Galeri fotoğrafları için yıl/ay dizini oluştur
+                            current_date = timezone.now()
+                            dest_dir = os.path.join(settings.MEDIA_ROOT, 'galeri', 
+                                                  str(current_date.year), 
+                                                  str(current_date.month).zfill(2))
                         else:
                             continue
                         
                         os.makedirs(dest_dir, exist_ok=True)
                         dest_path = os.path.join(dest_dir, filename)
                         shutil.copy2(source_path, dest_path)
-                        print(f"Fotoğraf kopyalandı: {filename}")
+                        print(f"Fotoğraf kopyalandı: {filename} ({photo_data['type']})")
                 except Exception as e:
                     print(f"Fotoğraf yükleme hatası {filename}: {e}")
                     continue
+        
+        # Veritabanı dosyasını geri yükle
+        update_restore_progress(95, 'Veritabanı dosyası geri yükleniyor...')
+        try:
+            # ZIP içindeki veritabanı dosyasını kontrol et
+            db_source_path = os.path.join(extract_dir, 'database', 'db.sqlite3')
+            if os.path.exists(db_source_path):
+                # Hedef dizini oluştur
+                db_dest_dir = os.path.join(settings.MEDIA_ROOT, 'database')
+                os.makedirs(db_dest_dir, exist_ok=True)
+                
+                # Veritabanı dosyasını kopyala
+                db_dest_path = os.path.join(db_dest_dir, 'db.sqlite3')
+                shutil.copy2(db_source_path, db_dest_path)
+                print(f"Veritabanı dosyası geri yüklendi: {db_dest_path}")
+            else:
+                print("Yedek dosyasında veritabanı bulunamadı")
+        except Exception as e:
+            print(f"Veritabanı geri yükleme hatası: {e}")
         
         update_restore_progress(100, 'Geri yükleme başarıyla tamamlandı!')
         
@@ -979,6 +1013,20 @@ def backup_data(request):
         photos_dir = os.path.join(backup_dir, 'photos')
         os.makedirs(photos_dir, exist_ok=True)
         
+        # Veritabanı için alt dizin oluştur
+        database_dir = os.path.join(backup_dir, 'database')
+        os.makedirs(database_dir, exist_ok=True)
+        
+        # Veritabanı dosyasını kopyala
+        try:
+            db_source = os.path.join(settings.MEDIA_ROOT, 'database', 'db.sqlite3')
+            if os.path.exists(db_source):
+                db_dest = os.path.join(database_dir, 'db.sqlite3')
+                shutil.copy2(db_source, db_dest)
+                print(f"Veritabanı dosyası kopyalandı: {db_dest}")
+        except Exception as e:
+            print(f"Veritabanı kopyalama hatası: {str(e)}")
+        
         # Resim bilgilerini depolamak için liste
         photo_info = []
         
@@ -1028,6 +1076,30 @@ def backup_data(request):
                 except Exception as e:
                     print(f"Öğrenci {ogrenci.id} resim kopyalama hatası: {str(e)}")
         
+        # Galeri fotoğraflarını kopyala
+        from .models import Galeri
+        galeri_fotograflari = Galeri.objects.all()
+        for galeri_foto in galeri_fotograflari:
+            if galeri_foto.dosya:
+                try:
+                    source_path = galeri_foto.dosya.path
+                    if os.path.exists(source_path):
+                        filename = os.path.basename(source_path)
+                        dest_path = os.path.join(photos_dir, filename)
+                        
+                        # Dosyayı kopyala
+                        shutil.copy2(source_path, dest_path)
+                        
+                        photo_info.append({
+                            'type': 'galeri',
+                            'id': galeri_foto.id,
+                            'filename': filename,
+                            'field': 'dosya'
+                        })
+                        print(f"Galeri {galeri_foto.id} resmi kopyalandı: {filename}")
+                except Exception as e:
+                    print(f"Galeri {galeri_foto.id} resim kopyalama hatası: {str(e)}")
+        
         # Tüm modelleri yedekle - Elif Ba modelleri dahil
         backup_data = {
             'ogrenciler': serializers.serialize('json', ogrenciler),
@@ -1041,9 +1113,10 @@ def backup_data(request):
             'elifba_ezberleri': serializers.serialize('json', ElifBaEzberi.objects.all()),
             'elifba_ezber_durumlari': serializers.serialize('json', ElifBaEzberDurumu.objects.all()),
             'categories': serializers.serialize('json', category.objects.all()),  # ✅ EKLENDİ
+            'galeri': serializers.serialize('json', Galeri.objects.all()),  # ✅ GALERİ EKLENDİ
             'photo_info': photo_info,
             'backup_date': timezone.now().isoformat(),
-            'backup_version': '1.4'  # Elif Ba için versiyonu güncelle
+            'backup_version': '1.6'  # Veritabanı dahil edildiği için versiyonu güncelle
         }
         
         # JSON dosyasını kaydet
@@ -1058,11 +1131,17 @@ def backup_data(request):
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             # JSON dosyasını ekle
             zipf.write(json_path, 'backup.json')
+            
             # Fotoğrafları ekle
             for root, dirs, files in os.walk(photos_dir):
                 for file in files:
                     file_path = os.path.join(root, file)
                     zipf.write(file_path, os.path.join('photos', file))
+            
+            # Veritabanı dosyasını ekle
+            db_file = os.path.join(database_dir, 'db.sqlite3')
+            if os.path.exists(db_file):
+                zipf.write(db_file, os.path.join('database', 'db.sqlite3'))
         
         # Geçici klasörü temizle
         shutil.rmtree(backup_dir)
@@ -2050,14 +2129,14 @@ def admin_dashboard(request):
     return render(request, 'admin_dashboard.html', context)
 
 
-def optimize_image(image_file, max_width=1200, quality=85):
+def optimize_image(image_file, max_width=1200, target_size_kb=500):
     """
-    Resmi optimize eder - boyutunu küçültür ve kalitesini ayarlar
+    Resmi optimize eder - boyutunu küçültür ve hedef dosya boyutuna sığdırır
     
     Args:
         image_file: UploadedFile objesi
         max_width: Maksimum genişlik (px)
-        quality: JPEG kalitesi (1-100 arası, 85 önerilen)
+        target_size_kb: Hedef dosya boyutu (KB)
     
     Returns:
         InMemoryUploadedFile: Optimize edilmiş resim
@@ -2091,9 +2170,21 @@ def optimize_image(image_file, max_width=1200, quality=85):
             new_height = int(img.height * ratio)
             img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
         
-        # BytesIO buffer'a kaydet
-        output = BytesIO()
-        img.save(output, format='JPEG', quality=85, optimize=True)
+        # Hedef boyuta sığana kadar kaliteyi düşür
+        quality = 90
+        min_quality = 30
+        target_size_bytes = target_size_kb * 1024
+        
+        while quality >= min_quality:
+            output = BytesIO()
+            img.save(output, format='JPEG', quality=quality, optimize=True)
+            
+            if output.tell() <= target_size_bytes:
+                break
+                
+            quality -= 5
+            output.seek(0)
+        
         output.seek(0)
         
         # Yeni dosya adı (.jpg uzantılı)
@@ -2162,9 +2253,23 @@ def yaziyaz(request):
                     'kategoriler':kategoriler,}
                   )
 
-        # Resim yüklenmişse optimize et
+        # Resim yüklenmişse optimize et ve galerive kaydet
+        galeri_fotograf = None
         if imageUrl:
-            imageUrl = optimize_image(imageUrl, max_width=1200, quality=85)
+            # Resmi optimize et (hedef: 500KB)
+            imageUrl = optimize_image(imageUrl, max_width=1200, target_size_kb=500)
+            
+            # Galeri kaydı oluştur
+            try:
+                from .models import Galeri
+                galeri_fotograf = Galeri.objects.create(
+                    baslik=f"{title} - Yazı Fotoğrafı",
+                    aciklama=f"'{title}' yazısına eklenen fotoğraf",
+                    dosya=imageUrl,
+                    kategori='YAZI'
+                )
+            except Exception as e:
+                print(f"Galeri kayıt hatası: {e}")
 
         yazilar = yazi(
             title=title, 
@@ -2174,6 +2279,11 @@ def yaziyaz(request):
             date=timezone.now().date()  # Bugünün tarihi
         )
         yazilar.save()
+        
+        # Galeri kaydına yazı ID'sini ekle
+        if galeri_fotograf:
+            galeri_fotograf.ilgili_yazi_id = yazilar.id
+            galeri_fotograf.save()
         
         return redirect('/blog')
         
@@ -3673,3 +3783,142 @@ def yeni_gunluk_bildirim(request):
         return JsonResponse({'success': True, 'baslik': bildirim.baslik, 'mesaj': bildirim.mesaj})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ============================================
+# Galeri Sistemi
+# ============================================
+
+@login_required
+def galeri(request):
+    """Galeri ana sayfası - tüm fotoğrafları listele"""
+    from .models import Galeri
+    from django.core.paginator import Paginator
+    
+    # Filtreleme
+    kategori = request.GET.get('kategori', '')
+    arama = request.GET.get('arama', '')
+    
+    fotograflar = Galeri.objects.all()
+    
+    if kategori:
+        fotograflar = fotograflar.filter(kategori=kategori)
+    
+    if arama:
+        fotograflar = fotograflar.filter(
+            models.Q(baslik__icontains=arama) | 
+            models.Q(aciklama__icontains=arama)
+        )
+    
+    # Sayfalama
+    paginator = Paginator(fotograflar, 12)  # 12 fotoğraf per sayfa
+    sayfa = request.GET.get('sayfa')
+    fotograflar = paginator.get_page(sayfa)
+    
+    # Kategoriler
+    kategoriler = Galeri.KATEGORI_CHOICES
+    
+    # İstatistikler
+    toplam_fotograf = Galeri.objects.count()
+    toplam_boyut_mb = sum([f.dosya_boyutu or 0 for f in Galeri.objects.all()]) / 1024
+    
+    # Boyut uyarısı (1GB = 1000MB)
+    boyut_yuzde = (toplam_boyut_mb / 1000) * 100
+    if boyut_yuzde > 90:
+        messages.warning(request, f'⚠️ Galeri boyutu {toplam_boyut_mb:.0f}MB - 1GB sınırına yaklaşıyorsunuz!')
+    elif boyut_yuzde > 80:
+        messages.info(request, f'📊 Galeri boyutu: {toplam_boyut_mb:.0f}MB / 1000MB')
+    
+    context = {
+        'fotograflar': fotograflar,
+        'kategoriler': kategoriler,
+        'secili_kategori': kategori,
+        'arama': arama,
+        'toplam_fotograf': toplam_fotograf,
+        'toplam_boyut_mb': round(toplam_boyut_mb, 2),
+        'boyut_yuzde': round(boyut_yuzde, 1),
+    }
+    
+    return render(request, 'galeri.html', context)
+
+
+@login_required
+def galeri_yukle(request):
+    """Galeri fotoğraf yükleme"""
+    if request.method == 'POST':
+        # Mevcut galeri boyutunu kontrol et
+        from .models import Galeri
+        toplam_boyut_mb = sum([f.dosya_boyutu or 0 for f in Galeri.objects.all()]) / 1024
+        
+        if toplam_boyut_mb > 950:  # 950MB sınırı
+            messages.error(request, '❌ Galeri sınırı aşıldı! (1GB) Önce eski fotoğrafları silin.')
+            return redirect('galeri')
+        
+        baslik = request.POST.get('baslik', '')
+        aciklama = request.POST.get('aciklama', '')
+        kategori = request.POST.get('kategori', 'MANUEL')
+        fotograf = request.FILES.get('fotograf')
+        
+        if not baslik:
+            messages.error(request, 'Başlık zorunludur!')
+            return redirect('galeri')
+        
+        if not fotograf:
+            messages.error(request, 'Fotoğraf seçmelisiniz!')
+            return redirect('galeri')
+        
+        # Dosya boyutu kontrolü (tek dosya için 10MB)
+        if fotograf.size > 10 * 1024 * 1024:
+            messages.error(request, 'Dosya boyutu 10MB\'dan küçük olmalıdır.')
+            return redirect('galeri')
+        
+        # Toplam boyut kontrolü (yeni dosya dahil)
+        new_file_size_mb = fotograf.size / (1024 * 1024)
+        if toplam_boyut_mb + new_file_size_mb > 1000:
+            messages.warning(request, f'⚠️ Bu dosya yüklenirse toplam boyut {toplam_boyut_mb + new_file_size_mb:.0f}MB olacak!')
+            messages.error(request, '❌ Galeri sınırı aşılacak! Önce eski fotoğrafları silin.')
+            return redirect('galeri')
+        
+        try:
+            # Fotoğrafı optimize et (hedef: 500KB)
+            optimize_fotograf = optimize_image(fotograf, max_width=1200, target_size_kb=500)
+            
+            # Galeri kaydı oluştur
+            galeri_obj = Galeri.objects.create(
+                baslik=baslik,
+                aciklama=aciklama,
+                dosya=optimize_fotograf,
+                kategori=kategori
+            )
+            
+            messages.success(request, f'"{baslik}" başlıklı fotoğraf başarıyla yüklendi! (Boyut: {galeri_obj.dosya_boyutu_mb()} MB)')
+            
+        except Exception as e:
+            messages.error(request, f'Fotoğraf yüklenirken hata oluştu: {str(e)}')
+    
+    return redirect('galeri')
+
+
+@login_required
+def galeri_sil(request, fotograf_id):
+    """Galeri fotoğrafını sil"""
+    from .models import Galeri
+    fotograf = get_object_or_404(Galeri, id=fotograf_id)
+    
+    if request.method == 'POST':
+        try:
+            # Dosyayı fiziksel olarak sil
+            if fotograf.dosya:
+                fotograf.dosya.delete()
+            
+            baslik = fotograf.baslik
+            fotograf.delete()
+            
+            messages.success(request, f'"{baslik}" başlıklı fotoğraf silindi.')
+        except Exception as e:
+            messages.error(request, f'Fotoğraf silinirken hata oluştu: {str(e)}')
+        
+        return redirect('galeri')
+    
+    context = {'fotograf': fotograf}
+    return render(request, 'galeri_sil_onay.html', context)

@@ -85,10 +85,14 @@ CACHES = {
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Veritabanı dosyasını media/database/ klasöründe sakla
+DB_DIR = BASE_DIR / 'media' / 'database'
+DB_DIR.mkdir(parents=True, exist_ok=True)  # Klasörü oluştur
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_DIR / 'db.sqlite3',
     }
 }
 
